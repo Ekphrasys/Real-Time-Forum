@@ -12,7 +12,7 @@ socket.onmessage = (event) => {
 };
 
 function sendMessage() {
-    const input = document.getElementById('input');
+    const input = document.getElementById('message');
     const message = input.value;
     socket.send(message);
     input.value = '';

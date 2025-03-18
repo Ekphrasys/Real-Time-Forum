@@ -11,6 +11,10 @@ import (
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		// Allow all connections by default
+		return true
+	},
 }
 
 func handleWebsocket(w http.ResponseWriter, r *http.Request) {
