@@ -4,7 +4,7 @@ import "time"
 
 // Struct for registering in users
 type User struct {
-	Id           int       `json:"id"`
+	Id           string    `json:"user_id"`
 	Username     string    `json:"username"`
 	FirstName    string    `json:"first_name"`
 	LastName     string    `json:"last_name"`
