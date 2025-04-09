@@ -1,35 +1,48 @@
 package server
 
 import (
-	"Real-Time-Forum/models"
-	"math"
-	"math/rand"
+	"encoding/json"
+	"fmt"
 	"net/http"
-	"strconv"
-	"text/template"
-	"time"
+
+	"Real-Time-Forum/database"
+	"Real-Time-Forum/models"
 )
 
-func (s *Server) GetLoginHandler(w http.ResponseWriter, r *http.Request) {
-}
-func (s *Server) PostLoginHandler(w http.ResponseWriter, r *http.Request) {
-}
-func (s *Server) LogoutHandler(w http.ResponseWriter, r *http.Request) {
-}
-func (s *Server) GetRegisterHandler(w http.ResponseWriter, r *http.Request) {
-	t, err := template.ParseFiles("./assets/register.tmpl.html")
+func registerHandler(w http.ResponseWriter, r *http.Request) {
+	var creds models.User
+	err := json.NewDecoder(r.Body).Decode(&creds)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Invalid data", http.StatusBadRequest)
 		return
 	}
-	t.Execute(w, nil)
-}
-func (s *Server) PostRegisterHandler(w http.ResponseWriter, r *http.Request) {
-	user := models.User{Username: r.FormValue("username"), Email: r.FormValue("email"), Password: r.FormValue("password"), Role: "user", CreationDate: time.Now(), UserId: strconv.Itoa(rand.Intn(math.MaxInt32))}
-	err := s.db.CreateUser(user)
+
+	err = database.RegisterUser(creds)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Error during registration", http.StatusInternalServerError)
 		return
 	}
-	http.Redirect(w, r, "/login", http.StatusSeeOther)
+
+	w.WriteHeader(http.StatusCreated)
+	fmt.Fprintln(w, "User successfully registered")
 }
+
+// func registerHandler(w http.ResponseWriter, r *http.Request) {
+// 	if r.Method != http.MethodPost {
+// 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+// 		return
+// 	}
+
+// 	// Lire et traiter le corps de la requête
+// 	var requestData map[string]interface{}
+// 	err := json.NewDecoder(r.Body).Decode(&requestData)
+// 	if err != nil {
+// 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+// 		return
+// 	}
+
+// 	// Réponse de confirmation
+// 	w.Header().Set("Content-Type", "application/json")
+// 	w.WriteHeader(http.StatusOK)
+// 	json.NewEncoder(w).Encode(map[string]string{"message": "User registered successfully"})
+// }

@@ -1,5 +1,5 @@
-INSERT INTO User (user_id, email, username, password, role, creation_date, session_id, session_expire)
- VALUES ('1', 'john.doe@example.com', 'JohnDoe', 'hashed_password_123', 'user', '2024-10-01 12:00:00', NULL, NULL);
+INSERT INTO User (user_id, email, username, password, creation_date, session_id, session_expire)
+ VALUES ('1', 'john.doe@example.com', 'JohnDoe', 'hashed_password_123', '2024-10-01 12:00:00', NULL, NULL);
  
  INSERT INTO User (user_id, email, username, password, role, creation_date, session_id, session_expire)
  VALUES ('2', 'jane.smith@example.com', 'JaneSmith', 'hashed_password_456', 'user', '2024-10-01 12:05:00', NULL, NULL);
@@ -38,3 +38,6 @@ INSERT INTO User (user_id, email, username, password, role, creation_date, sessi
  
  INSERT INTO Post_Category (post_id, category_id)
  VALUES ('102', '2');  -- Second post belongs to Science
+
+ INSERT INTO user (username, first_name, last_name, age, gender, email, password, creation_date) 
+VALUES ('testuser', 'John', 'Doe', 25, 1, 'john@example.com', 'hashedpassword', '2024-10-01 12:00:00');

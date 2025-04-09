@@ -1,13 +1,22 @@
 const routes = {
     register: `
         <h1>Register</h1>
-        <form onsubmit="register(event)">
-            <input type="text" id="nickname" placeholder="Nickname..." required>
+        <form id="registerForm">
+            <input type="text" id="username" placeholder="Username..." required>
+            <input type="number" id="age" placeholder="Age..." required min="13" max="120">
+            <select id="gender" required>
+                <option value="" disabled selected>Select Gender</option>
+                <option value="1">Male</option>
+                <option value="2">Female</option>
+                <option value="3">Other</option>
+            </select>
+            <input type="text" id="firstname" placeholder="Firstname..." required>
+            <input type="text" id="lastname" placeholder="Lastname..." required>
             <input type="email" id="email" placeholder="Email..." required>
             <input type="password" id="password" placeholder="Password..." required>
             <button type="submit">Register</button>
         </form>
-        <p>Already have an account ?<a href="#" onclick="navigateTo('login')">login</a></p>
+        <p>Already have an account ?<a href="#" onclick="navigateTo('login')"> Login</a></p>
     `,
 
     login: `
@@ -17,7 +26,7 @@ const routes = {
             <input type="password" id="password" placeholder="Password..." required>
             <button type="submit">Login</button>
         </form>
-        <p>Don't have an account ?<a href="#" onclick="navigateTo('register')">register</a></p>
+        <p>Don't have an account ?<a href="#" onclick="navigateTo('register')"> Register</a></p>
     `,
 
 };
@@ -26,10 +35,51 @@ window.onload = function () {
     navigateTo('register');
 };
 
-// Fonction pour naviguer entre les "pages"
+// Fnction to navigate between pages
 function navigateTo(page) {
     if (routes[page]) {
         document.getElementById("app").innerHTML = routes[page];
         history.pushState({}, page, `#${page}`);
     }
+    // Attach event listener for register form after inserting into DOM
+    if (page === "register") {
+        attachRegisterEventListener();
+    }
 }
+
+// Fonction pour attacher l'événement au formulaire
+function attachRegisterEventListener() {
+    const form = document.getElementById("registerForm");
+    
+
+    form.addEventListener("submit", function (event) {
+        event.preventDefault();
+        
+        const formData = {
+            username: document.getElementById("username").value,
+            age: parseInt(document.getElementById("age").value),
+            gender: parseInt(document.getElementById("gender").value),
+            firstname: document.getElementById("firstname").value,
+            lastname: document.getElementById("lastname").value,
+            email: document.getElementById("email").value,
+            password: document.getElementById("password").value
+        };
+    
+        fetch("/register", {
+            method: "POST",
+            body: JSON.stringify(formData),
+            headers: { "Content-Type": "application/json" },
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.text().then(text => { throw new Error(text) });
+            }
+            return response.json();
+        })
+        .then(data => console.log("Success:", data))
+        .catch(error => console.error("Error:", error));
+    });
+}
+    
+
+    

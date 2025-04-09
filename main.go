@@ -8,6 +8,9 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"Real-Time-Forum/database"
+	"Real-Time-Forum/server"
 )
 
 // "github.com/gorilla/websocket"
@@ -81,12 +84,23 @@ func gracefulShutdown(apiServer *http.Server) {
 }
 
 func main() {
+	database.InitDB()
+	defer database.DB.Close()
+
+	mux := http.NewServeMux()
+	server.SetupRoutes(mux)
+
+	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "Go server + SQLite operational!")
+	})
+
 	// Serve static files
-	http.Handle("/", http.FileServer(http.Dir("./static")))
+	mux.Handle("/", http.FileServer(http.Dir("./static")))
 
 	// Create a new HTTP server instance.
 	server := &http.Server{
-		Addr: ":8080", // Set the server address and port.
+		Addr:    ":8080", // Set the server address and port.
+		Handler: mux,     // Set the request handler to the default multiplexer.
 	}
 
 	// Start the graceful shutdown process in a separate goroutine.
