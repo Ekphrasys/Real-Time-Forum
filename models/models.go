@@ -2,7 +2,7 @@ package models
 
 import "time"
 
-// Struct for registering and logging in users
+// Struct for registering in users
 type User struct {
 	Id           int       `json:"id"`
 	Username     string    `json:"username"`

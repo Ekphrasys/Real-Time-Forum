@@ -10,8 +10,8 @@ const routes = {
                 <option value="2">Female</option>
                 <option value="3">Other</option>
             </select>
-            <input type="text" id="firstname" placeholder="Firstname..." required>
-            <input type="text" id="lastname" placeholder="Lastname..." required>
+            <input type="text" id="first_name" placeholder="Firstname..." required>
+            <input type="text" id="last_name" placeholder="Lastname..." required>
             <input type="email" id="email" placeholder="Email..." required>
             <input type="password" id="password" placeholder="Password..." required>
             <button type="submit">Register</button>
@@ -59,8 +59,8 @@ function attachRegisterEventListener() {
             username: document.getElementById("username").value,
             age: parseInt(document.getElementById("age").value),
             gender: parseInt(document.getElementById("gender").value),
-            firstname: document.getElementById("firstname").value,
-            lastname: document.getElementById("lastname").value,
+            first_name: document.getElementById("first_name").value,
+            last_name: document.getElementById("last_name").value,
             email: document.getElementById("email").value,
             password: document.getElementById("password").value
         };
@@ -80,6 +80,3 @@ function attachRegisterEventListener() {
         .catch(error => console.error("Error:", error));
     });
 }
-    
-
-    
