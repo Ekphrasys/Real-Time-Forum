@@ -21,22 +21,29 @@ const routes = {
 
     login: `
         <h1>Login</h1>
-        <form onsubmit="login(event)">
-            <input type="text" id="nickname" placeholder="Nickname..." required>
+        <form id="loginForm">
+            <input type="text" id="usernameOrMail" placeholder="Username or Email..." required>
             <input type="password" id="password" placeholder="Password..." required>
             <button type="submit">Login</button>
         </form>
+        <div id="errorMessage" style="color: red;"></div>
         <p>Don't have an account ?<a href="#" onclick="navigateTo('register')"> Register</a></p>
+    `,
+
+    home: `
+        <h1>Home</h1>
+        <p>Welcome to the home page!</p>
+        <button onclick="navigateTo('login')">Logout</button>
     `,
 
 };
 
 window.onload = function () {
-    navigateTo('register');
+    navigateTo('login');
 };
 
-// Fnction to navigate between pages
-function navigateTo(page) {
+// Function to navigate between pages
+export function navigateTo(page) {
     if (routes[page]) {
         document.getElementById("app").innerHTML = routes[page];
         history.pushState({}, page, `#${page}`);
@@ -45,38 +52,10 @@ function navigateTo(page) {
     if (page === "register") {
         attachRegisterEventListener();
     }
+
+    if (page === "login") {
+        attachLoginEventListener();
+    }
 }
 
-// Fonction pour attacher l'événement au formulaire
-function attachRegisterEventListener() {
-    const form = document.getElementById("registerForm");
-    
-
-    form.addEventListener("submit", function (event) {
-        event.preventDefault();
-        
-        const formData = {
-            username: document.getElementById("username").value,
-            age: parseInt(document.getElementById("age").value),
-            gender: parseInt(document.getElementById("gender").value),
-            first_name: document.getElementById("first_name").value,
-            last_name: document.getElementById("last_name").value,
-            email: document.getElementById("email").value,
-            password: document.getElementById("password").value
-        };
-    
-        fetch("/register", {
-            method: "POST",
-            body: JSON.stringify(formData),
-            headers: { "Content-Type": "application/json" },
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.text().then(text => { throw new Error(text) });
-            }
-            return response.json();
-        })
-        .then(data => console.log("Success:", data))
-        .catch(error => console.error("Error:", error));
-    });
-}
+import { attachLoginEventListener, attachRegisterEventListener } from './auth.js';

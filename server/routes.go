@@ -7,6 +7,7 @@ import (
 // SetupRoutes defines all the application routes
 func SetupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/register", registerHandler)
+	mux.HandleFunc("/login", LoginHandler)
 
 	// Adds a route to check if the server is running
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {

@@ -3,6 +3,7 @@ package database
 import (
 	"Real-Time-Forum/models"
 	"Real-Time-Forum/shared"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -31,11 +32,39 @@ func RegisterUser(user models.User) error {
 		user.Email, string(hashedPassword), user.CreationDate,
 	)
 	if err != nil {
-		fmt.Printf("Database error details: %v\n", err) // Add this line
 		return fmt.Errorf("failed to insert user into database: %w", err)
 	}
 
 	fmt.Printf("User registered with UUID: %s\n", user.Id)
 	fmt.Println("User registered:", user.Username)
 	return nil
+}
+
+// LoginUser authenticates a user and returns the user if successful
+func LoginUser(identifier, password string) (*models.User, error) {
+	var user models.User
+
+	// Retrieve the user's data from the database
+	err := DB.QueryRow(
+		`SELECT user_id, username, email, password FROM user 
+         WHERE email = ? OR username = ?`,
+		identifier, identifier,
+	).Scan(&user.Id, &user.Username, &user.Email, &user.Password)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("user not found")
+		}
+		return nil, fmt.Errorf("database error: %w", err)
+	}
+
+	// Compare the provided password with the stored hashed password
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+	if err != nil {
+		return nil, fmt.Errorf("invalid password")
+	}
+
+	// Clear the password before returning the user
+	user.Password = ""
+	return &user, nil
 }
