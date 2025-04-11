@@ -58,4 +58,6 @@ export function navigateTo(page) {
     }
 }
 
+window.navigateTo = navigateTo;
+
 import { attachLoginEventListener, attachRegisterEventListener } from './auth.js';
