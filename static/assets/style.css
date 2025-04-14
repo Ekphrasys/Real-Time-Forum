@@ -52,6 +52,7 @@ p {
 form {
   background-color: white;
   padding: 30px;
+  font-family: 'Comic Sans MS', 'Chicken Scratch', cursive;
   border-radius: 50px 50px 50px 0;
   max-width: 500px;
   margin: 0 auto;
@@ -94,11 +95,12 @@ input:focus, select:focus {
 }
 
 button {
+  font-family: 'Comic Sans MS', 'Chicken Scratch', cursive;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: 0 10px;
+  padding: 10px;
   color: white;
   cursor: pointer;
   border: none;
@@ -144,14 +146,17 @@ button:hover::after {
 
 /* Link styles */
 a {
+  margin-left: 5px;
   color: #E91E63;
   text-decoration: none;
   font-weight: bold;
   position: relative;
+  display: inline-block;
 }
 
 a:hover {
-  color: #E91E63; /* A CHANGER */
+  transform: scale(1.1);
+  transition: transform 0.3s ease;
 }
 
 /* Error message
