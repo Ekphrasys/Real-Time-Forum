@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"Real-Time-Forum/database"
@@ -21,6 +20,22 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	IsUnique, _ := database.FindEmailUser(creds.Email)
+	if !IsUnique {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Email already in use"})
+		return
+	}
+
+	IsUniqueUsername, _ := database.FindUsername(creds.Username)
+	if !IsUniqueUsername {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Username already in use"})
+		return
+	}
+
 	// Attempt to register the user in the database.
 	err = database.RegisterUser(creds)
 	if err != nil {
@@ -29,9 +44,9 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If registration is successful, respond with a 201 Created status
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintln(w, "User successfully registered")
+	json.NewEncoder(w).Encode(creds)
 }
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {

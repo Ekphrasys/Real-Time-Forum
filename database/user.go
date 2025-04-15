@@ -40,6 +40,36 @@ func RegisterUser(user models.User) error {
 	return nil
 }
 
+func FindUsername(username string) (bool, error) {
+	query := "SELECT username FROM User WHERE username=?"
+	row := DB.QueryRow(query, username)
+	var foundUsername string
+	err := row.Scan(&foundUsername)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return true, nil // No rows means username is available
+		}
+		return false, err
+	}
+	return false, nil // Username exists
+}
+
+func FindEmailUser(email string) (bool, error) {
+	// Check if email exists
+	query := "SELECT email FROM User WHERE email=?"
+	row := DB.QueryRow(query, email)
+	var foundEmail string
+	err := row.Scan(&foundEmail)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return true, nil // No rows means email is available
+		}
+		return false, err
+	}
+	return false, nil
+}
+
 // LoginUser authenticates a user and returns the user if successful
 func LoginUser(identifier, password string) (*models.User, error) {
 	var user models.User

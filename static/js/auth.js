@@ -1,12 +1,13 @@
 import { navigateTo } from './main.js';
 
-// Function to attach the event to the form
+// // Function to attach the event to the form
 export function attachRegisterEventListener() {
     const form = document.getElementById("registerForm");
-    
 
     form.addEventListener("submit", function (event) {
         event.preventDefault();
+
+        clearErrors(form);
         
         const formData = {
             username: document.getElementById("username").value,
@@ -25,13 +26,53 @@ export function attachRegisterEventListener() {
         })
         .then(response => {
             if (!response.ok) {
-                return response.text().then(text => { throw new Error(text) });
+                return response.json()
+                    .catch(() => { throw new Error(response.statusText) })
+                    .then(errorData => {
+                        // Check for specific error messages from backend
+                        if (errorData.error && errorData.error.includes("Email")) {
+                            throw new Error("This email is already used");
+                        } else if (errorData.error && errorData.error.includes("Username")) {
+                            throw new Error("This username is already taken");
+                        } else {
+                            throw new Error(errorData.error || errorData.message || "Registration failed");
+                        }
+                    });
             }
             return response.json();
         })
-        .then(data => console.log("Success:", data))
-        .catch(error => console.error("Error:", error));
+        .then(data => { 
+            console.log("Success:", data);
+            navigateTo('login');
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            displayError(error.message, form);
+        });
     });
+}
+
+
+function displayError(message, form) {
+    const errorContainer = document.getElementById("error-message");
+
+    if (!errorContainer) {
+        const container = document.createElement("div");
+        container.id = "error-message";
+        container.className = "error-message";
+        form.insertBefore(container, form.firstChild);
+    }
+
+    const errorElement = document.getElementById("error-message");
+    errorElement.textContent = message;
+    errorElement.style.display = "block";
+}
+
+function clearErrors(form) {
+    const errorMessage = document.getElementById("error-message");
+    if (errorMessage) {
+        errorMessage.textContent = "";
+    }
 }
 
 // Function to attach the event to the login form

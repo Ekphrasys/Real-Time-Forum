@@ -72,6 +72,13 @@ form::before {
   transform: rotate(30deg);
 }
 
+.error-message {
+  color: #ff3333;
+  padding: 8px;
+  margin-top: 10px;
+  display: none;
+}
+
 input, select, button {
   display: block;
   width: 100%;
