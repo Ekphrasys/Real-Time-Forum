@@ -11,24 +11,26 @@ import (
 
 	"Real-Time-Forum/database"
 	"Real-Time-Forum/server"
+
+	"github.com/gorilla/websocket"
 )
 
-// "github.com/gorilla/websocket"
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		// Allow all connections by default
+		return true
+	},
+}
 
-// var upgrader = websocket.Upgrader{
-// 	ReadBufferSize:  1024,
-// 	WriteBufferSize: 1024,
-// 	CheckOrigin: func(r *http.Request) bool {
-// 		// Allow all connections by default
-// 		return true
-// 	},
-// }
+// Removed as it is now in websockets.go
 
 // func handleWebsocket(w http.ResponseWriter, r *http.Request) {
 // 	// Upgrade the HTTP connection to a websocket connection
 // 	conn, err := upgrader.Upgrade(w, r, nil)
 // 	if err != nil {
-// 		fmt.Println(err)
+// 		log.Println("Upgrade Error", err)
 // 		return
 // 	}
 // 	defer conn.Close()
@@ -50,7 +52,6 @@ import (
 // }
 
 // func main() {
-// 	http.HandleFunc("/ws", handleWebsocket)
 
 // 	// Serve index.html and other static files
 // 	http.Handle("/", http.FileServer(http.Dir("./")))
@@ -90,10 +91,6 @@ func main() {
 	mux := http.NewServeMux()
 	server.SetupRoutes(mux)
 
-	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "Go server + SQLite operational!")
-	})
-
 	// Serve static files
 	mux.Handle("/", http.FileServer(http.Dir("./static")))
 
@@ -106,7 +103,7 @@ func main() {
 	// Start the graceful shutdown process in a separate goroutine.
 	go gracefulShutdown(server)
 
-	fmt.Println("Server started on port", server.Addr)
+	fmt.Println("Server started on port\nAccess link : http://localhost:8080/", server.Addr)
 	// Start the HTTP server and listen for incoming requests.
 	err := server.ListenAndServe()
 	if err != nil && err != http.ErrServerClosed {

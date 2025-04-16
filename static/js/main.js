@@ -1,5 +1,5 @@
 const routes = {
-    register: `
+  register: `
         <h1>Register</h1>
         <form id="registerForm">
             <input type="text" id="username" placeholder="Username..." required>
@@ -19,7 +19,7 @@ const routes = {
         <p>Already have an account ?<a href="#" onclick="navigateTo('login')"> Login</a></p>
     `,
 
-    login: `
+  login: `
         <h1>Login</h1>
         <form id="loginForm">
             <input type="text" id="usernameOrMail" placeholder="Username or Email..." required>
@@ -30,34 +30,48 @@ const routes = {
         <p>Don't have an account ?<a href="#" onclick="navigateTo('register')"> Register</a></p>
     `,
 
-    home: `
+  home: `
         <h1>Home</h1>
         <p>Welcome to the home page!</p>
-        <button onclick="navigateTo('login')">Logout</button>
+    <button onclick="logout()">Logout</button>
     `,
-
 };
 
 window.onload = function () {
-    navigateTo('login');
+  navigateTo("login");
 };
 
 // Function to navigate between pages
 export function navigateTo(page) {
-    if (routes[page]) {
-        document.getElementById("app").innerHTML = routes[page];
-        history.pushState({}, page, `#${page}`);
-    }
-    // Attach event listener for register form after inserting into DOM
-    if (page === "register") {
-        attachRegisterEventListener();
-    }
+  if (routes[page]) {
+    document.getElementById("app").innerHTML = routes[page];
+    history.pushState({}, page, `#${page}`);
+  }
+  // Attach event listener for register form after inserting into DOM
+  if (page === "register") {
+    attachRegisterEventListener();
+  }
 
-    if (page === "login") {
-        attachLoginEventListener();
-    }
+  if (page === "login") {
+    attachLoginEventListener();
+  }
 }
 
 window.navigateTo = navigateTo;
 
-import { attachLoginEventListener, attachRegisterEventListener } from './auth.js';
+import {
+  attachLoginEventListener,
+  attachRegisterEventListener,
+} from "./auth.js";
+
+function logout() {
+  fetch("/logout", { method: "POST" })
+    .then((response) => response.json())
+    .then(() => {
+      navigateTo("login");
+    })
+    .catch((error) => console.error("Logout error:", error));
+}
+
+// Exposer la fonction au niveau global
+window.logout = logout;

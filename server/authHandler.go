@@ -2,12 +2,16 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
+	"sync"
 
 	"Real-Time-Forum/database"
 	"Real-Time-Forum/models"
+	"Real-Time-Forum/shared"
 )
+
+var sessions = make(map[string]string) // sessionID -> userID
+var sessionsMutex sync.RWMutex
 
 // registerHandler handles user registration requests
 func registerHandler(w http.ResponseWriter, r *http.Request) {
@@ -30,8 +34,10 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If registration is successful, respond with a 201 Created status
-	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintln(w, "User successfully registered")
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "User successfully registered",
+	})
 }
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
@@ -49,18 +55,68 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Validate required fields
 	if loginData.Identifier == "" || loginData.Password == "" {
-		http.Error(w, "Email/username and password are required", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "Email/username and password are required",
+		})
 		return
 	}
 
 	// Authenticate the user
 	user, err := database.LoginUser(loginData.Identifier, loginData.Password)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": err.Error(),
+		})
 		return
 	}
 
+	// If authentication is successful, set the session cookie
+	sessionID := shared.ParseUUID(shared.GenerateUUID())
+	cookie := &http.Cookie{
+		Name:     "session_id",
+		Value:    sessionID,
+		HttpOnly: true,
+		Path:     "/",
+		MaxAge:   3600 * 1, // 1 hour
+	}
+	http.SetCookie(w, cookie)
+	// Store the session ID in a global map
+	sessionsMutex.Lock()
+	sessions[sessionID] = user.Id
+	sessionsMutex.Unlock()
 	// Return the user data (without password)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(user)
+}
+
+func LogoutHandler(w http.ResponseWriter, r *http.Request) {
+	// Fetch the session ID from the cookie
+	cookie, err := r.Cookie("session_id")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Not logged in"})
+		return
+	}
+
+	// Delete the session from the global map
+	sessionsMutex.Lock()
+	delete(sessions, cookie.Value)
+	sessionsMutex.Unlock()
+
+	// Set the cookie to expire immediately
+	expiredCookie := &http.Cookie{
+		Name:     "session_id",
+		Value:    "",
+		HttpOnly: true,
+		Path:     "/",
+		MaxAge:   -1, // -1 = supprimer immédiatement
+	}
+	http.SetCookie(w, expiredCookie)
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Logged out successfully"})
 }
