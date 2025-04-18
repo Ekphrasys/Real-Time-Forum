@@ -8,6 +8,13 @@ body {
   z-index: 0;
 }
 
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
 h1 {
   color: #E91E63;
   text-align: center;
@@ -46,6 +53,46 @@ p {
 #app {
   position: relative;
   z-index: 1;
+}
+
+#welcome {
+  white-space: nowrap;
+  margin: 0;
+}
+
+.user-info {
+  display: flex;
+  gap: 20px;
+  align-items: center; /* This ensures vertical alignment */
+}
+
+.main-content {
+  display: flex;
+  justify-content: space-between; /* This will push columns to opposite sides */
+  align-items: flex-start; /* Align items at the top */
+  gap: 20px;
+  width: 100%;
+}
+
+.users-container {
+  flex: 1; /* Takes up 1 fraction of available space */
+  max-width: 30%; /* Limits width to 30% of parent */
+  margin: 0; /* Remove auto margin to allow left alignment */
+}
+
+.posts-container {
+  flex: 2; /* Takes up 2 fractions of available space (twice as wide as users) */
+  max-width: 65%; /* Limits width to 65% of parent */
+  margin: 0; /* Remove auto margin to allow right alignment */
+}
+
+.users-container, .posts-container {
+  background-color: white;
+  padding: 30px;
+  font-family: 'Comic Sans MS', 'Chicken Scratch', cursive;
+  border-radius: 50px 50px 50px 0;
+  box-shadow: 10px 10px 0 #FF9800;
+  border: 5px dashed #FFEB3B;
 }
 
 /* Form styles */

@@ -34,17 +34,23 @@ const routes = {
     `,
 
   home: `
-        <header>
+      <header>
+          <h1>Holy Chicken Order</h1>
             <div class="user-info">
-                <p>Welcome, {{ .User.Username}}</p>
-                <button class="logout-button" type="submit">Logout</button>
+              <p id="welcome">Welcome, {{ .User.Username}}</p>
+              <button id="logout-button" type="submit">Logout</button>
             </div>
-        </header>
-        <h1>Holy Chicken Order 🍗</h1>
-        <p>Welcome to the home page!</p>
+      </header>
         
 
         <div class="main-content">
+        <div class="users-container">
+            <h3 class="users-title">Currently Online</h3>
+            <ul class="users-list">
+                <li class="user-item">{{ .User.Username}}</li>
+            </ul>
+        </div>
+
         <div class="posts-container">
             <div class="create-post">
                 <h3>Create a new post</h3>
@@ -56,13 +62,6 @@ const routes = {
             <div class="posts">
                 {{ range .Posts }}
             </div>
-        </div>
-        
-        <div class="users-container">
-            <h3 class="users-title">Currently Online ({{ .OnlineUsersCount }})</h3>
-            <ul class="users-list">
-                <li class="user-item">{{ .User.Username}}</li>
-            </ul>
         </div>
     </div>
     `,
