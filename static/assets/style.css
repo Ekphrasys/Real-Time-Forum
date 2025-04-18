@@ -79,6 +79,14 @@ form::before {
   display: none;
 }
 
+.logout-button {
+  font-family: 'Comic Sans MS', 'Chicken Scratch', cursive;
+  background-color: #FF5722;
+  max-width: fit-content;
+  margin-left: auto;
+  margin-right: 0;
+}
+
 input, select, button {
   display: block;
   width: 100%;
@@ -165,16 +173,6 @@ a:hover {
   transform: scale(1.1);
   transition: transform 0.3s ease;
 }
-
-/* Error message
-#errorMessage {
-  background-color: #FFEBEE;
-  padding: 10px;
-  border-radius: 10px;
-  border-left: 5px solid #F44336;
-  margin: 10px 0;
-  animation: shake 0.5s;
-} */
 
 /* Responsive design */
 @media (max-width: 600px) {
