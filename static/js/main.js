@@ -15,6 +15,9 @@ const routes = {
             <input type="email" id="email" placeholder="Email..." required>
             <input type="password" id="password" placeholder="Password..." required>
             <button type="submit">Register</button>
+
+            <!-- Error container -->
+            <div id="error-message" class="error-message"></div>
         </form>
         <p>Already have an account ?<a href="#" onclick="navigateTo('login')"> Login</a></p>
     `,
@@ -31,11 +34,37 @@ const routes = {
     `,
 
   home: `
-        <h1>Home</h1>
+        <header>
+            <div class="user-info">
+                <p>Welcome, {{ .User.Username}}</p>
+                <button class="logout-button" type="submit">Logout</button>
+            </div>
+        </header>
+        <h1>Holy Chicken Order 🍗</h1>
         <p>Welcome to the home page!</p>
-    <button onclick="logout()">Logout</button>
+        
 
-    
+        <div class="main-content">
+        <div class="posts-container">
+            <div class="create-post">
+                <h3>Create a new post</h3>
+                <textarea placeholder="What's on your mind?" rows="3"></textarea>
+                <button type="button">Post</button>
+            </div>
+            
+            <h2>Recent Posts</h2>
+            <div class="posts">
+                {{ range .Posts }}
+            </div>
+        </div>
+        
+        <div class="users-container">
+            <h3 class="users-title">Currently Online ({{ .OnlineUsersCount }})</h3>
+            <ul class="users-list">
+                <li class="user-item">{{ .User.Username}}</li>
+            </ul>
+        </div>
+    </div>
     `,
 };
 
