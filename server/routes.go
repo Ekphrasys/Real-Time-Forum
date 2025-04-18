@@ -1,6 +1,7 @@
 package server
 
 import (
+	"Real-Time-Forum/shared"
 	"net/http"
 )
 

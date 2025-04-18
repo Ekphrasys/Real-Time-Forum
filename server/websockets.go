@@ -3,14 +3,9 @@ package server
 import (
 	"log"
 	"net/http"
-	"sync"
 
 	"github.com/gorilla/websocket"
 )
-
-// Map to store active sessions
-var clients = make(map[string]*websocket.Conn) // userID -> connection
-var clientsMutex sync.RWMutex
 
 // Upgrader to handle WebSocket connections
 var upgrader = websocket.Upgrader{
@@ -22,7 +17,7 @@ var upgrader = websocket.Upgrader{
 }
 
 // HandleWebsocket handles WebSocket connections
-func HandleWebsocket(w http.ResponseWriter, r *http.Request) {
+func HandleWebsocket(w http.ResponseWriter, r *http.Request, h *Hub) {
 	// Check authentification with cookie
 	cookie, err := r.Cookie("session_id")
 	if err != nil {
@@ -49,10 +44,7 @@ func HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("New Websocket connexion from user %s", userID)
 
-	// Save the connection in the clients map
-	clientsMutex.Lock()
-	clients[userID] = conn
-	clientsMutex.Unlock()
+	AddClient(conn, userID)
 
 	// Clean up the connection when done
 	defer func() {

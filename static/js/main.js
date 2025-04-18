@@ -33,7 +33,7 @@ const routes = {
         <p>Don't have an account ?<a href="#" onclick="navigateTo('register')"> Register</a></p>
     `,
 
-    home: `
+  home: `
         <header>
             <div class="user-info">
                 <p>Welcome, {{ .User.Username}}</p>
