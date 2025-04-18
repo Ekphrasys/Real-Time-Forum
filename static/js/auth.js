@@ -1,6 +1,6 @@
 import { navigateTo } from "./main.js";
 
-// Function to attach the event to the form
+// // Function to attach the event to the form
 export function attachRegisterEventListener() {
   const form = document.getElementById("registerForm");
 
@@ -37,6 +37,30 @@ export function attachRegisterEventListener() {
       // Optionnel: afficher l'erreur à l'utilisateur
     }
   });
+
+}
+
+
+function displayError(message, form) {
+    const errorContainer = document.getElementById("error-message");
+
+    if (!errorContainer) {
+        const container = document.createElement("div");
+        container.id = "error-message";
+        container.className = "error-message";
+        form.insertBefore(container, form.firstChild);
+    }
+
+    const errorElement = document.getElementById("error-message");
+    errorElement.textContent = message;
+    errorElement.style.display = "block";
+}
+
+function clearErrors(form) {
+    const errorMessage = document.getElementById("error-message");
+    if (errorMessage) {
+        errorMessage.textContent = "";
+    }
 }
 
 // Function to attach the event to the login form

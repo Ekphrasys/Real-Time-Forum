@@ -25,6 +25,22 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	IsUnique, _ := database.FindEmailUser(creds.Email)
+	if !IsUnique {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Email already in use"})
+		return
+	}
+
+	IsUniqueUsername, _ := database.FindUsername(creds.Username)
+	if !IsUniqueUsername {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Username already in use"})
+		return
+	}
+
 	// Attempt to register the user in the database.
 	err = database.RegisterUser(creds)
 	if err != nil {
@@ -38,6 +54,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{
 		"message": "User successfully registered",
 	})
+
 }
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {

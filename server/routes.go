@@ -10,6 +10,7 @@ func SetupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/login", LoginHandler)
 	mux.HandleFunc("/logout", LogoutHandler)
 	mux.HandleFunc("/ws", HandleWebsocket)
+	hub := shared.NewHub()
 
 	// Adds a route to check if the server is running
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
