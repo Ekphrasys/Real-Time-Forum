@@ -70,6 +70,7 @@ export function attachLoginEventListener() {
       }
 
       console.log("Login successful:", userData);
+      updateNavigation(true);
 
       // Redirect to home page after successful login
       navigateTo("home");

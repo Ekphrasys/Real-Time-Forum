@@ -38,7 +38,7 @@ const routes = {
 };
 
 window.onload = function () {
-  navigateTo("login");
+  checkSession();
 };
 
 // Function to navigate between pages
@@ -65,13 +65,59 @@ import {
 } from "./auth.js";
 
 function logout() {
+  console.log("Logout clicked");
   fetch("/logout", { method: "POST" })
     .then((response) => response.json())
     .then(() => {
+      updateNavigation(false);
       navigateTo("login");
     })
     .catch((error) => console.error("Logout error:", error));
 }
 
-// Exposer la fonction au niveau global
+// Verify if the session is still active
+function checkSession() {
+  fetch("/check-session", { method: "GET" })
+    .then((response) => {
+      if (response.ok) {
+        updateNavigation(true);
+        navigateTo("home");
+      } else {
+        updateNavigation(false);
+        navigateTo("login");
+      }
+    })
+    .catch((error) => {
+      console.error("Session check error:", error);
+      updateNavigation(false);
+    });
+}
+
+function updateNavigation(isAuthenticated) {
+  const nav = document.getElementById("auth-nav");
+
+  if (isAuthenticated) {
+    nav.innerHTML = `
+          <button onclick="logout()">Logout</button>
+          <button onclick="goToHome()">Home</button>
+      `;
+  } else {
+    nav.innerHTML = `
+          <button onclick="navigateTo('login')">Login</button>
+          <button onclick="navigateTo('register')">Register</button>
+          <button onclick="goToHome()">Home</button>
+      `;
+  }
+}
+
+// Function to navigate to the home page
+function goToHome() {
+  navigateTo("home");
+}
+
+// Expose functions to the global scope
 window.logout = logout;
+window.checkSession = checkSession;
+window.goToHome = goToHome;
+window.updateNavigation = updateNavigation;
+window.navigateTo = navigateTo;

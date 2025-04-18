@@ -8,9 +8,28 @@ type User struct {
 	Username     string    `json:"username"`
 	FirstName    string    `json:"first_name"`
 	LastName     string    `json:"last_name"`
-	Age          int       `json:"age"` // 1 = male, 2 = female, 3 = other
-	Gender       int       `json:"gender"`
+	Age          int       `json:"age"`
+	Gender       int       `json:"gender"` // 1 = male, 2 = female, 3 = other
 	Email        string    `json:"email"`
 	Password     string    `json:"password"`
 	CreationDate time.Time `json:"creation_date"`
+}
+
+type Post struct {
+	Id        string    `json:"post_id"`
+	UserId    string    `json:"user_id"`
+	Title     string    `json:"title"`
+	Content   string    `json:"content"`
+	Category  string    `json:"category"`
+	CreatedAt time.Time `json:"created_at"`
+	Username  string    `json:"username"`
+}
+
+type Comment struct {
+	Id        string    `json:"comment_id"`
+	PostId    string    `json:"post_id"`
+	UserId    string    `json:"user_id"`
+	Content   string    `json:"content"`
+	CreatedAt time.Time `json:"created_at"`
+	Username  string    `json:"username"`
 }

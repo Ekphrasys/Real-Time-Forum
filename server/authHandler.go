@@ -81,7 +81,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		Value:    sessionID,
 		HttpOnly: true,
 		Path:     "/",
-		MaxAge:   3600 * 1, // 1 hour
+		MaxAge:   60 * 1, // 1 minute
 	}
 	http.SetCookie(w, cookie)
 	// Store the session ID in a global map
