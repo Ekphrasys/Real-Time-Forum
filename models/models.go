@@ -16,13 +16,13 @@ type User struct {
 }
 
 type Post struct {
-	Id        string    `json:"post_id"`
-	UserId    string    `json:"user_id"`
-	Title     string    `json:"title"`
-	Content   string    `json:"content"`
-	Category  string    `json:"category"`
-	CreatedAt time.Time `json:"created_at"`
-	Username  string    `json:"username"`
+	Id           string    `json:"post_id"`
+	UserId       string    `json:"user_id"`
+	Title        string    `json:"title"`
+	Content      string    `json:"content"`
+	Category     string    `json:"category"`
+	CreationDate time.Time `json:"created_at"`
+	Username     string    `json:"username"`
 }
 
 type Comment struct {

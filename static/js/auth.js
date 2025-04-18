@@ -1,6 +1,6 @@
 import { navigateTo } from "./main.js";
 
-// // Function to attach the event to the form
+// Function to attach the event to the form
 export function attachRegisterEventListener() {
   const form = document.getElementById("registerForm");
 
@@ -34,33 +34,24 @@ export function attachRegisterEventListener() {
       navigateTo("login");
     } catch (error) {
       console.error("Error:", error);
-      // Optionnel: afficher l'erreur à l'utilisateur
+      displayError(error.message, form);
     }
   });
-
 }
-
 
 function displayError(message, form) {
-    const errorContainer = document.getElementById("error-message");
+  const errorContainer = document.getElementById("error-message");
 
-    if (!errorContainer) {
-        const container = document.createElement("div");
-        container.id = "error-message";
-        container.className = "error-message";
-        form.insertBefore(container, form.firstChild);
-    }
+  if (!errorContainer) {
+    const container = document.createElement("div");
+    container.id = "error-message";
+    container.className = "error-message";
+    form.insertBefore(container, form.firstChild);
+  }
 
-    const errorElement = document.getElementById("error-message");
-    errorElement.textContent = message;
-    errorElement.style.display = "block";
-}
-
-function clearErrors(form) {
-    const errorMessage = document.getElementById("error-message");
-    if (errorMessage) {
-        errorMessage.textContent = "";
-    }
+  const errorElement = document.getElementById("error-message");
+  errorElement.textContent = message;
+  errorElement.style.display = "block";
 }
 
 // Function to attach the event to the login form
@@ -94,7 +85,6 @@ export function attachLoginEventListener() {
       }
 
       console.log("Login successful:", userData);
-      updateNavigation(true);
 
       // Redirect to home page after successful login
       navigateTo("home");

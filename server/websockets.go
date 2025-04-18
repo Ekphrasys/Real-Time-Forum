@@ -17,7 +17,7 @@ var upgrader = websocket.Upgrader{
 }
 
 // HandleWebsocket handles WebSocket connections
-func HandleWebsocket(w http.ResponseWriter, r *http.Request, h *Hub) {
+func HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 	// Check authentification with cookie
 	cookie, err := r.Cookie("session_id")
 	if err != nil {
@@ -44,16 +44,16 @@ func HandleWebsocket(w http.ResponseWriter, r *http.Request, h *Hub) {
 
 	log.Printf("New Websocket connexion from user %s", userID)
 
-	AddClient(conn, userID)
+	// AddClient(conn, userID)
 
 	// Clean up the connection when done
-	defer func() {
-		conn.Close()
-		clientsMutex.Lock()
-		delete(clients, userID)
-		clientsMutex.Unlock()
-		log.Printf("Websocket Connexion closed for user %s", userID)
-	}()
+	// defer func() {
+	// 	conn.Close()
+	// 	clientsMutex.Lock()
+	// 	delete(clients, userID)
+	// 	clientsMutex.Unlock()
+	// 	log.Printf("Websocket Connexion closed for user %s", userID)
+	// }()
 
 	// Main loop to read messages from the WebSocket
 	for {
