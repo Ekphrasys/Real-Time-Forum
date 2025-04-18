@@ -12,6 +12,26 @@ import (
 
 // RegisterUser registers a new user
 func RegisterUser(user models.User) error {
+	// Check if username already exists
+	var exists bool
+	err := DB.QueryRow("SELECT EXISTS(SELECT 1 FROM user WHERE username = ?)", user.Username).Scan(&exists)
+	if err != nil {
+		return fmt.Errorf("database error: %w", err)
+	}
+	if exists {
+		return fmt.Errorf("username already exists")
+	}
+
+	// Check if email already exists
+	err = DB.QueryRow("SELECT EXISTS(SELECT 1 FROM user WHERE email = ?)", user.Email).Scan(&exists)
+	if err != nil {
+		return fmt.Errorf("database error: %w", err)
+	}
+	if exists {
+		return fmt.Errorf("email already exists")
+	}
+
+	// Generate a UUID for the user
 	uuidObj := shared.GenerateUUID()
 	user.Id = shared.ParseUUID(uuidObj) // Convert to string format
 
@@ -34,9 +54,6 @@ func RegisterUser(user models.User) error {
 	if err != nil {
 		return fmt.Errorf("failed to insert user into database: %w", err)
 	}
-
-	fmt.Printf("User registered with UUID: %s\n", user.Id)
-	fmt.Println("User registered:", user.Username)
 	return nil
 }
 
@@ -83,7 +100,7 @@ func LoginUser(identifier, password string) (*models.User, error) {
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("user not found")
+			return nil, fmt.Errorf("Username/Mail not found")
 		}
 		return nil, fmt.Errorf("database error: %w", err)
 	}
@@ -91,7 +108,7 @@ func LoginUser(identifier, password string) (*models.User, error) {
 	// Compare the provided password with the stored hashed password
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 	if err != nil {
-		return nil, fmt.Errorf("invalid password")
+		return nil, fmt.Errorf("Invalid password")
 	}
 
 	// Clear the password before returning the user

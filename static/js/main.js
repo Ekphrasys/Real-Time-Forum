@@ -1,5 +1,5 @@
 const routes = {
-    register: `
+  register: `
         <h1>Register</h1>
         <form id="registerForm">
             <input type="text" id="username" placeholder="Username..." required>
@@ -22,7 +22,7 @@ const routes = {
         <p>Already have an account ?<a href="#" onclick="navigateTo('login')"> Login</a></p>
     `,
 
-    login: `
+  login: `
         <h1>Login</h1>
         <form id="loginForm">
             <input type="text" id="usernameOrMail" placeholder="Username or Email..." required>
@@ -66,29 +66,89 @@ const routes = {
         </div>
     </div>
     `,
-
 };
 
 window.onload = function () {
-    navigateTo('login');
+  checkSession();
 };
 
 // Function to navigate between pages
 export function navigateTo(page) {
-    if (routes[page]) {
-        document.getElementById("app").innerHTML = routes[page];
-        history.pushState({}, page, `#${page}`);
-    }
-    // Attach event listener for register form after inserting into DOM
-    if (page === "register") {
-        attachRegisterEventListener();
-    }
+  if (routes[page]) {
+    document.getElementById("app").innerHTML = routes[page];
+    history.pushState({}, page, `#${page}`);
+  }
+  // Attach event listener for register form after inserting into DOM
+  if (page === "register") {
+    attachRegisterEventListener();
+  }
 
-    if (page === "login") {
-        attachLoginEventListener();
-    }
+  if (page === "login") {
+    attachLoginEventListener();
+  }
 }
 
 window.navigateTo = navigateTo;
 
-import { attachLoginEventListener, attachRegisterEventListener } from './auth.js';
+import {
+  attachLoginEventListener,
+  attachRegisterEventListener,
+} from "./auth.js";
+
+function logout() {
+  console.log("Logout clicked");
+  fetch("/logout", { method: "POST" })
+    .then((response) => response.json())
+    .then(() => {
+      updateNavigation(false);
+      navigateTo("login");
+    })
+    .catch((error) => console.error("Logout error:", error));
+}
+
+// Verify if the session is still active
+function checkSession() {
+  fetch("/check-session", { method: "GET" })
+    .then((response) => {
+      if (response.ok) {
+        updateNavigation(true);
+        navigateTo("home");
+      } else {
+        updateNavigation(false);
+        navigateTo("login");
+      }
+    })
+    .catch((error) => {
+      console.error("Session check error:", error);
+      updateNavigation(false);
+    });
+}
+
+function updateNavigation(isAuthenticated) {
+  const nav = document.getElementById("auth-nav");
+
+  if (isAuthenticated) {
+    nav.innerHTML = `
+          <button onclick="logout()">Logout</button>
+          <button onclick="goToHome()">Home</button>
+      `;
+  } else {
+    nav.innerHTML = `
+          <button onclick="navigateTo('login')">Login</button>
+          <button onclick="navigateTo('register')">Register</button>
+          <button onclick="goToHome()">Home</button>
+      `;
+  }
+}
+
+// Function to navigate to the home page
+function goToHome() {
+  navigateTo("home");
+}
+
+// Expose functions to the global scope
+window.logout = logout;
+window.checkSession = checkSession;
+window.goToHome = goToHome;
+window.updateNavigation = updateNavigation;
+window.navigateTo = navigateTo;
