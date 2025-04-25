@@ -1,10 +1,17 @@
 package server
 
 import (
+	"Real-Time-Forum/database"
 	"log"
 	"net/http"
 
 	"github.com/gorilla/websocket"
+)
+
+// Define message types
+const (
+	UserStatusUpdate = "user_status"
+	PrivateMessage   = "private_message"
 )
 
 // Upgrader to handle WebSocket connections
@@ -25,12 +32,9 @@ func HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fetch the userID from the session map
-	sessionsMutex.RLock()
-	userID, exists := sessions[cookie.Value]
-	sessionsMutex.RUnlock()
-
-	if !exists {
+	// Get the user ID from the database using the session ID
+	userID, err := database.GetUserIDFromSession(cookie.Value)
+	if err != nil {
 		http.Error(w, "Invalid session", http.StatusUnauthorized)
 		return
 	}

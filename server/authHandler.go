@@ -2,16 +2,14 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
-	"sync"
+	"time"
 
 	"Real-Time-Forum/database"
 	"Real-Time-Forum/models"
 	"Real-Time-Forum/shared"
 )
-
-var sessions = make(map[string]string) // sessionID -> userID
-var sessionsMutex sync.RWMutex
 
 // registerHandler handles user registration requests
 func registerHandler(w http.ResponseWriter, r *http.Request) {
@@ -77,6 +75,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]string{
 			"error": "Email/username and password are required",
 		})
+		fmt.Println("Email/username and password are required")
 		return
 	}
 
@@ -91,22 +90,33 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If authentication is successful, set the session cookie
+	// Generate a session ID
 	sessionID := shared.ParseUUID(shared.GenerateUUID())
+
+	// Define session duration
+	sessionDuration := 1 * time.Hour
+
+	// Save the session in the database
+	err = database.SaveSession(sessionID, user.Id, sessionDuration)
+	if err != nil {
+		http.Error(w, "Error creating session", http.StatusInternalServerError)
+		fmt.Println("Error creating session:", err)
+		return
+	}
+
+	// Set the session ID in a cookie
 	cookie := &http.Cookie{
 		Name:     "session_id",
 		Value:    sessionID,
 		HttpOnly: true,
 		Path:     "/",
-		MaxAge:   60 * 1, // 1 minute
+		MaxAge:   int(sessionDuration.Seconds()), // Same duration as session
 	}
 	http.SetCookie(w, cookie)
-	// Store the session ID in a global map
-	sessionsMutex.Lock()
-	sessions[sessionID] = user.Id
-	sessionsMutex.Unlock()
-	// Return the user data (without password)
+
+	// Respond with user data (excluding password)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(user)
 }
 
@@ -114,26 +124,49 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	// Fetch the session ID from the cookie
 	cookie, err := r.Cookie("session_id")
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Not logged in"})
+		http.Error(w, "Not authenticated", http.StatusUnauthorized)
+		return
+	}
+	// Delete the session from the database
+	err = database.DeleteSession(cookie.Value)
+	if err != nil {
+		http.Error(w, "Error deleting session", http.StatusInternalServerError)
+		fmt.Println("Error deleting session:", err)
+		return
+	}
+	// Remove the session ID cookie from the user's browser
+	cookie.MaxAge = -1 // Set MaxAge to -1 to delete the cookie
+	cookie.Value = ""
+	http.SetCookie(w, cookie)
+	// Respond with a success message
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Logged out successfully"})
+}
+
+func CheckSessionHandler(w http.ResponseWriter, r *http.Request) {
+	// Fetch the session ID from the cookie
+	cookie, err := r.Cookie("session_id")
+	if err != nil {
+		http.Error(w, "Not authenticated", http.StatusUnauthorized)
 		return
 	}
 
-	// Delete the session from the global map
-	sessionsMutex.Lock()
-	delete(sessions, cookie.Value)
-	sessionsMutex.Unlock()
-
-	// Set the cookie to expire immediately
-	expiredCookie := &http.Cookie{
-		Name:     "session_id",
-		Value:    "",
-		HttpOnly: true,
-		Path:     "/",
-		MaxAge:   -1, // -1 = supprimer immédiatement
+	// Get the user ID from the database using the session ID
+	userID, err := database.GetUserIDFromSession(cookie.Value)
+	if err != nil {
+		http.Error(w, "Invalid session", http.StatusUnauthorized)
+		return
 	}
-	http.SetCookie(w, expiredCookie)
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "Logged out successfully"})
+	// Get user details from database
+	user, err := database.GetUserByID(userID)
+	if err != nil {
+		http.Error(w, "User not found", http.StatusInternalServerError)
+		return
+	}
+
+	// Respond with the user ID
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(user)
 }

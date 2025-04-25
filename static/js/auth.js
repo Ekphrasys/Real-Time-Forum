@@ -1,4 +1,4 @@
-import { navigateTo } from "./main.js";
+import { navigateTo, updateNavigation } from "./main.js";
 
 // Function to attach the event to the form
 export function attachRegisterEventListener() {
@@ -66,9 +66,7 @@ export function attachLoginEventListener() {
     const password = document.getElementById("password").value;
 
     try {
-      // Call your backend API endpoint
       const response = await fetch("/login", {
-        // Make sure this matches your route
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -77,6 +75,7 @@ export function attachLoginEventListener() {
           identifier: identifier,
           password: password,
         }),
+        credentials: "include", // Include cookies in the request
       });
 
       const userData = await response.json();
@@ -84,7 +83,14 @@ export function attachLoginEventListener() {
         throw new Error(userData.error || "Login failed");
       }
 
+      // Sets the current user
+      window.currentUser = userData;
+
       console.log("Login successful:", userData);
+      console.log("Current user:", window.currentUser.username);
+
+      // Update navigation based on login status
+      updateNavigation(true);
 
       // Redirect to home page after successful login
       navigateTo("home");

@@ -21,15 +21,21 @@ type Post struct {
 	Title        string    `json:"title"`
 	Content      string    `json:"content"`
 	Category     string    `json:"category"`
-	CreationDate time.Time `json:"created_at"`
+	CreationDate time.Time `json:"creation_date"`
 	Username     string    `json:"username"`
 }
 
 type Comment struct {
-	Id        string    `json:"comment_id"`
-	PostId    string    `json:"post_id"`
-	UserId    string    `json:"user_id"`
-	Content   string    `json:"content"`
-	CreatedAt time.Time `json:"created_at"`
-	Username  string    `json:"username"`
+	Id           string    `json:"comment_id"`
+	PostId       string    `json:"post_id"`
+	UserId       string    `json:"user_id"`
+	Content      string    `json:"content"`
+	CreationDate time.Time `json:"creation_date"`
+	Username     string    `json:"username"`
+}
+
+// Add to your models.go file
+type PostWithComments struct {
+	Post     Post      `json:"post"`
+	Comments []Comment `json:"comments"`
 }

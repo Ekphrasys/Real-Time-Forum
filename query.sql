@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS User (
    post_id CHAR(32) PRIMARY KEY,
    title VARCHAR(50) NOT NULL,
    content TEXT NOT NULL, -- Content of the post
+   category VARCHAR(50) NOT NULL,
    user_id CHAR(32) NOT NULL,
    creation_date DATETIME NOT NULL,
    update_date DATETIME,
@@ -54,3 +55,13 @@ CREATE TABLE IF NOT EXISTS User (
    FOREIGN KEY (post_id) REFERENCES Post(post_id),
    FOREIGN KEY (category_id) REFERENCES Category(category_id)
  );
+
+CREATE TABLE IF NOT EXISTS session (
+    session_id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    created_at DATETIME NOT NULL,
+    expires_at DATETIME NOT NULL,
+    status TEXT DEFAULT 'online',
+    FOREIGN KEY (user_id) REFERENCES user(user_id)
+);
+

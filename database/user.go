@@ -115,3 +115,38 @@ func LoginUser(identifier, password string) (*models.User, error) {
 	user.Password = ""
 	return &user, nil
 }
+
+// GetUserByID retrieves a user by their ID
+func GetUserByID(userID string) (*models.User, error) {
+	var user models.User
+
+	// Debug output
+	fmt.Println("Getting user with ID:", userID)
+
+	// Query the database for the user with the given ID
+	err := DB.QueryRow(`
+        SELECT user_id, username, email, first_name, last_name, age, gender, creation_date 
+        FROM User 
+        WHERE user_id = ?`,
+		userID).Scan(
+		&user.Id,
+		&user.Username,
+		&user.Email,
+		&user.FirstName,
+		&user.LastName,
+		&user.Age,
+		&user.Gender,
+		&user.CreationDate,
+	)
+
+	if err != nil {
+		fmt.Println("Error getting user:", err)
+		return nil, err
+	}
+
+	// Don't return the password
+	user.Password = ""
+
+	fmt.Printf("Found user: %+v\n", user)
+	return &user, nil
+}
