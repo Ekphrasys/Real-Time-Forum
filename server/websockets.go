@@ -2,8 +2,11 @@ package server
 
 import (
 	"Real-Time-Forum/database"
+	"encoding/json"
 	"log"
 	"net/http"
+	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -39,6 +42,15 @@ func HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Set this user's status to online
+	database.UpdateSessionStatus(cookie.Value, "online")
+
+	// Get user details for broadcasting
+	user, err := database.GetUserByID(userID)
+	if err != nil {
+		log.Println("Error getting user details:", err)
+	}
+
 	// Upgrade the connection to WebSocket
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -48,24 +60,131 @@ func HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("New Websocket connexion from user %s", userID)
 
-	// AddClient(conn, userID)
+	// Add connection to a slice (instead of map)
+	activeConn := Connection{
+		UserID: userID,
+		Conn:   conn,
+	}
 
-	// Clean up the connection when done
-	// defer func() {
-	// 	conn.Close()
-	// 	clientsMutex.Lock()
-	// 	delete(clients, userID)
-	// 	clientsMutex.Unlock()
-	// 	log.Printf("Websocket Connexion closed for user %s", userID)
-	// }()
+	// Add to connections slice with mutex
+	connectionsLock.Lock()
+	connections = append(connections, activeConn)
+	connectionsLock.Unlock()
 
-	// Main loop to read messages from the WebSocket
+	// Broadcast to all clients that this user is online
+	broadcastUserStatus(userID, user.Username, "online")
+
+	// Send current online users list to the new client
+	sendOnlineUsersList(conn)
+
+	// Set up cleanup on disconnect
+	defer func() {
+		conn.Close()
+
+		// Remove from connections slice
+		connectionsLock.Lock()
+		for i, c := range connections {
+			if c.UserID == userID {
+				// Remove by replacing with last element and truncating
+				connections[i] = connections[len(connections)-1]
+				connections = connections[:len(connections)-1]
+				break
+			}
+		}
+		connectionsLock.Unlock()
+
+		// Update status in database
+		database.UpdateSessionStatus(cookie.Value, "offline")
+
+		// Broadcast offline status
+		broadcastUserStatus(userID, user.Username, "offline")
+
+		log.Printf("WebSocket connection closed for user %s", userID)
+	}()
+
+	// Main message loop
 	for {
 		_, message, err := conn.ReadMessage()
 		if err != nil {
 			log.Printf("Reading error: %v", err)
 			break
 		}
-		log.Printf("Message received by %s: %s", userID, string(message))
+		log.Printf("Message received from %s: %s", userID, string(message))
+
+		// Handle different message types here
 	}
 }
+
+// Define a Connection struct
+type Connection struct {
+	UserID string
+	Conn   *websocket.Conn
+}
+
+// Create a slice to store connections instead of a map
+var connections []Connection
+var connectionsLock sync.Mutex
+
+// Send all online users to a specific client
+func sendOnlineUsersList(conn *websocket.Conn) {
+	onlineUsers, err := database.GetOnlineUsers()
+	if err != nil {
+		log.Println("Error fetching online users:", err)
+		return
+	}
+
+	// Create a message with all online users
+	message := map[string]interface{}{
+		"type":  "online_users",
+		"users": onlineUsers,
+	}
+
+	// Send the message
+	messageJSON, _ := json.Marshal(message)
+	conn.WriteMessage(websocket.TextMessage, messageJSON)
+}
+
+// Broadcast user status change to all connected clients
+func broadcastUserStatus(userID, username, status string) {
+	message := map[string]interface{}{
+		"type":      "user_status",
+		"user_id":   userID,
+		"username":  username,
+		"status":    status,
+		"timestamp": time.Now().UnixNano() / int64(time.Millisecond),
+	}
+
+	messageJSON, _ := json.Marshal(message)
+
+	// Send to all connections
+	connectionsLock.Lock()
+	for _, conn := range connections {
+		// Skip sending to the user who changed status
+		if conn.UserID != userID {
+			conn.Conn.WriteMessage(websocket.TextMessage, messageJSON)
+		}
+	}
+	connectionsLock.Unlock()
+}
+
+// AddClient(conn, userID)
+
+// Clean up the connection when done
+// defer func() {
+// 	conn.Close()
+// 	clientsMutex.Lock()
+// 	delete(clients, userID)
+// 	clientsMutex.Unlock()
+// 	log.Printf("Websocket Connexion closed for user %s", userID)
+// }()
+
+// Main loop to read messages from the WebSocket
+// 	for {
+// 		_, message, err := conn.ReadMessage()
+// 		if err != nil {
+// 			log.Printf("Reading error: %v", err)
+// 			break
+// 		}
+// 		log.Printf("Message received by %s: %s", userID, string(message))
+// 	}
+// }

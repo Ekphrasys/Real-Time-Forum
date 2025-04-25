@@ -184,6 +184,9 @@ function checkSession() {
       console.log("currentUser after setting:", currentUser); // Debug to verify
       updateNavigation(true);
       navigateTo("home");
+
+      // Initialize WebSocket after successful login
+      initializeWebSocket();
     })
     .catch((error) => {
       console.error("Session check error:", error);
@@ -505,3 +508,93 @@ function setupCommentForm(postId) {
 
 // Make sure to expose viewPost globally
 window.viewPost = viewPost;
+
+function initializeWebSocket() {
+  if (window.websocket) {
+    // Already connected
+    return;
+  }
+
+  const socket = new WebSocket("ws://localhost:8080/ws");
+
+  socket.onopen = function () {
+    console.log("WebSocket connection established");
+  };
+
+  socket.onmessage = function (event) {
+    const message = JSON.parse(event.data);
+    console.log("WebSocket message received:", message);
+
+    if (message.type === "online_users") {
+      updateOnlineUsersList(message.users);
+    } else if (message.type === "user_status") {
+      handleUserStatusChange(message);
+    }
+  };
+
+  socket.onclose = function () {
+    console.log("WebSocket connection closed");
+    window.websocket = null;
+  };
+
+  window.websocket = socket;
+}
+
+// Update online users list
+function updateOnlineUsersList(users) {
+  const usersList = document.querySelector(".users-list");
+  if (!usersList) return;
+
+  // Clear current list
+  usersList.innerHTML = "";
+
+  // Add all online users
+  users.forEach((user) => {
+    const listItem = document.createElement("li");
+    listItem.className = "user-item online";
+    listItem.textContent = user.username;
+    usersList.appendChild(listItem);
+  });
+
+  // If no online users other than current user
+  if (users.length <= 1) {
+    const listItem = document.createElement("li");
+    listItem.className = "user-item";
+    listItem.textContent = "No other users online";
+    usersList.appendChild(listItem);
+  }
+}
+
+// Handle user status change
+function handleUserStatusChange(message) {
+  const usersList = document.querySelector(".users-list");
+  if (!usersList) return;
+
+  // Check if user already in list
+  const existingUser = Array.from(
+    usersList.querySelectorAll(".user-item")
+  ).find((item) => item.textContent === message.username);
+
+  if (message.status === "online") {
+    // Add user if not already in list
+    if (!existingUser) {
+      const listItem = document.createElement("li");
+      listItem.className = "user-item online";
+      listItem.textContent = message.username;
+      usersList.appendChild(listItem);
+    } else {
+      existingUser.classList.add("online");
+    }
+  } else if (message.status === "offline") {
+    // Remove online class if user exists
+    if (existingUser) {
+      existingUser.classList.remove("online");
+    }
+  }
+}
+
+// Call this when the user logs in
+function initializeAfterLogin() {
+  // Initialize WebSocket connection
+  initializeWebSocket();
+}
