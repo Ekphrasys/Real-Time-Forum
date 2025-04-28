@@ -100,3 +100,14 @@ export function attachLoginEventListener() {
     }
   });
 }
+
+export function logout() {
+  console.log("Logout clicked");
+  fetch("/logout", { method: "POST", credentials: "include" })
+    .then((response) => response.json())
+    .then(() => {
+      updateNavigation(false);
+      navigateTo("login");
+    })
+    .catch((error) => console.error("Logout error:", error));
+}

@@ -95,6 +95,10 @@ p {
   border: 5px dashed #FFEB3B;
 }
 
+#post-content {
+  height : 200px !important
+}
+
 /* Form styles */
 form {
   background-color: white;
