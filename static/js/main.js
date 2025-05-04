@@ -182,7 +182,6 @@ function loadOnlineUsers() {
 }
 
 function loadAllUsers() {
-  console.log("Fetching all users...");
   fetch('/users', {
     method: 'GET',
     headers: {
@@ -191,23 +190,19 @@ function loadAllUsers() {
     credentials: 'include'
   })
   .then(response => {
-    console.log("Response status:", response.status);
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
     return response.json();
   })
   .then(users => {
-    console.log("Received users data:", users);
     if (users && users.length > 0) {
-      updateUsersList(users, false);
+      updateUsersList(users, false); // false pour afficher tous les utilisateurs
     } else {
-      console.log("No users found");
       document.querySelector('.users-list').innerHTML = '<li>No users found</li>';
     }
   })
   .catch(error => {
-    console.error('Error fetching all users:', error);
     document.querySelector('.users-list').innerHTML = `<li>Error loading users: ${error.message}</li>`;
   });
 }

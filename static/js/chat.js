@@ -3,114 +3,41 @@ let showingOnlineUsers = true;
 
 export function updateUsersList(users, onlineOnly = true) {
     const usersList = document.querySelector(".users-list");
-    if (!usersList) {
-        console.error("Users list element not found!");
-        return;
-    }
+    if (!usersList) return;
 
     usersList.innerHTML = '';
 
-    // Debug: Affiche les données reçues
-    console.log("Users received:", users);
-    console.log("Current user:", currentUser);
+    const currentUserId = currentUser?.id;
 
-    // Ne filtrez PAS les utilisateurs - affichez tous les utilisateurs
-    // const otherUsers = users.filter(user => user.id !== currentUser?.id);
-    const otherUsers = users; // Affiche tous les utilisateurs
-
-    if (otherUsers.length === 0) {
+    users.forEach(user => {
         const item = document.createElement("li");
-        item.className = "user-item";
-        item.textContent = onlineOnly ? "No users online" : "No users found";
-        usersList.appendChild(item);
-        return;
-    }
-
-    otherUsers.forEach(user => {
-        const item = document.createElement("li");
-        item.className = `user-item ${user.is_online ? 'online' : ''}`;
+        // On garde la classe online/offline pour le style visuel
+        item.className = `user-item ${user.is_online ? 'online' : 'offline'}`;
         item.dataset.userId = user.id;
         item.dataset.username = user.username;
 
+        // Rendre cliquable tous les utilisateurs sauf l'actuel
+        if (user.id !== currentUserId) {
+            item.style.cursor = 'pointer';
+            item.addEventListener('click', () => {
+                console.log("Opening chat with:", user.id, user.username);
+                openChat(user.id, user.username);
+            });
+        } else {
+            item.classList.add('current-user');
+        }
+
+        const statusDiv = document.createElement("div");
+        statusDiv.className = `user-status ${user.is_online ? 'online' : 'offline'}`;
+        
         const nameDiv = document.createElement("div");
         nameDiv.className = "user-name";
         nameDiv.textContent = user.username;
 
-        // Ajoutez un indicateur de statut
-        const statusDiv = document.createElement("div");
-        statusDiv.className = `user-status ${user.is_online ? 'online' : 'offline'}`;
-        
-        item.prepend(statusDiv);
-        item.appendChild(nameDiv);
-        
-        // Rendre cliquable seulement si différent de l'utilisateur courant
-        if (user.id !== currentUser?.id) {
-            item.style.cursor = 'pointer';
-            item.addEventListener('click', () => openChat(user.id, user.username));
-        }
-
+        item.append(statusDiv, nameDiv);
         usersList.appendChild(item);
     });
 }
-
-// // Modifiez la fonction updateOnlineUsersList pour rendre les utilisateurs cliquables
-// export function updateOnlineUsersList(users) {
-//     const usersList = document.querySelector(".users-list");
-//     if (!usersList) {
-//         console.error("Users list element not found!");
-//         return;
-//     }
-
-//     // Nettoyage complet de la liste
-//     usersList.innerHTML = '';
-
-//     // Filtrage des utilisateurs
-//     const otherUsers = users.filter(user => user.id !== currentUser?.id);
-
-//     if (otherUsers.length === 0) {
-//         const item = document.createElement("li");
-//         item.className = "user-item";
-//         item.textContent = "No other users online";
-//         usersList.appendChild(item);
-//         return;
-//     }
-
-//     // Création des éléments utilisateur
-//     otherUsers.forEach(user => {
-//         const item = document.createElement("li");
-//         item.className = "user-item online";
-
-//         // Méthode 1: Attributs data-*
-//         item.setAttribute('data-user-id', user.id);
-//         item.setAttribute('data-username', user.username);
-
-//         // Méthode 2: Propriété dataset
-//         item.dataset.userId = user.id;
-//         item.dataset.username = user.username;
-
-//         // Méthode 3: Stockage direct
-//         item.userData = user;
-
-//         // Création du contenu
-//         const nameDiv = document.createElement("div");
-//         nameDiv.className = "user-name";
-//         nameDiv.textContent = user.username;
-
-//         item.appendChild(nameDiv);
-//         usersList.appendChild(item);
-
-//         // Vérification immédiate
-//         console.log(`User item created:`, {
-//             element: item,
-//             dataset: item.dataset,
-//             attributes: {
-//                 id: item.getAttribute('data-user-id'),
-//                 username: item.getAttribute('data-username')
-//             },
-//             userData: item.userData
-//         });
-//     });
-// }
 
 export function sendMessage() {
     if (!currentChatPartner) return;
@@ -209,27 +136,18 @@ export async function loadMessageHistory(userId) {
 
 export function openChat(userId, username) {
     console.log("Opening chat with:", userId, username);
-    console.trace(); // Affiche la pile d'appels
-
     currentChatPartner = { id: userId, username };
 
     const chatModal = document.getElementById("chat-modal");
     const partnerName = document.getElementById("chat-partner-name");
 
-    console.log("Modal element:", chatModal);
-    console.log("Partner name element:", partnerName);
-
-    if (!chatModal || !partnerName) {
-        console.error("Chat elements not found!");
-        return;
+    if (chatModal && partnerName) {
+        partnerName.textContent = username;
+        chatModal.style.display = "flex";
+        loadMessageHistory(userId);
+    } else {
+        console.error("Chat modal elements not found!");
     }
-
-    partnerName.textContent = username;
-    chatModal.style.display = "flex";
-    console.log("Chat modal should be visible now");
-
-    // Charger l'historique
-    loadMessageHistory(userId);
 }
 
 // Fonction pour fermer le chat
@@ -247,8 +165,8 @@ export function initChat() {
 
     // Gestion améliorée des clics
     document.addEventListener('click', function (e) {
-        const userItem = e.target.closest('.user-item.online');
-        if (!userItem) return;
+        const userItem = e.target.closest('.user-item');
+    if (!userItem) return;
 
         // Essai progressif pour récupérer les données
         let userId, username;

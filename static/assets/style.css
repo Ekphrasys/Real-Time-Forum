@@ -20,10 +20,13 @@ h1 {
   text-align: center;
   font-size: 3em;
   text-shadow: 3px 3px 0 #FFC107;
-  margin: 0 auto 20px; /* This centers the block */
+  margin: 0 auto 20px;
+  /* This centers the block */
   position: relative;
-  display: block; /* Changed from inline-block */
-  width: fit-content; /* Makes the h1 only as wide as its content */
+  display: block;
+  /* Changed from inline-block */
+  width: fit-content;
+  /* Makes the h1 only as wide as its content */
 }
 
 h1::after {
@@ -35,8 +38,13 @@ h1::after {
 }
 
 @keyframes bobble {
-  0% { transform: rotate(-15deg); }
-  100% { transform: rotate(15deg); }
+  0% {
+    transform: rotate(-15deg);
+  }
+
+  100% {
+    transform: rotate(15deg);
+  }
 }
 
 p {
@@ -44,10 +52,13 @@ p {
   text-align: center;
   font-size: 1.2em;
   padding-top: 20px;
-  margin: 0 auto 20px; /* This centers the block */
+  margin: 0 auto 20px;
+  /* This centers the block */
   position: relative;
-  display: block; /* Changed from inline-block */
-  width: fit-content; /* Makes the p only as wide as its content */
+  display: block;
+  /* Changed from inline-block */
+  width: fit-content;
+  /* Makes the p only as wide as its content */
 }
 
 #app {
@@ -63,30 +74,40 @@ p {
 .user-info {
   display: flex;
   gap: 20px;
-  align-items: center; /* This ensures vertical alignment */
+  align-items: center;
+  /* This ensures vertical alignment */
 }
 
 .main-content {
   display: flex;
-  justify-content: space-between; /* This will push columns to opposite sides */
-  align-items: flex-start; /* Align items at the top */
+  justify-content: space-between;
+  /* This will push columns to opposite sides */
+  align-items: flex-start;
+  /* Align items at the top */
   gap: 20px;
   width: 100%;
 }
 
 .users-container {
-  flex: 1; /* Takes up 1/3rd of space */
-  max-width: 30%; /* Limits width to 30% of parent */
-  margin: 0; /* Remove auto margin to allow left alignment */
+  flex: 1;
+  /* Takes up 1/3rd of space */
+  max-width: 30%;
+  /* Limits width to 30% of parent */
+  margin: 0;
+  /* Remove auto margin to allow left alignment */
 }
 
 .posts-container {
-  flex: 2; /* Takes up 2/3rd (twice as wide as users) */
-  max-width: 65%; /* Limits width to 65% of parent */
-  margin: 0; /* Remove auto margin to allow right alignment */
+  flex: 2;
+  /* Takes up 2/3rd (twice as wide as users) */
+  max-width: 65%;
+  /* Limits width to 65% of parent */
+  margin: 0;
+  /* Remove auto margin to allow right alignment */
 }
 
-.users-container, .posts-container {
+.users-container,
+.posts-container {
   background-color: white;
   padding: 30px;
   font-family: 'Comic Sans MS', 'Chicken Scratch', cursive;
@@ -96,7 +117,7 @@ p {
 }
 
 #post-content {
-  height : 200px !important
+  height: 200px !important
 }
 
 /* User list toggle styles */
@@ -137,19 +158,6 @@ p {
   margin: 0;
 }
 
-.user-item {
-  padding: 10px;
-  margin-bottom: 5px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  transition: all 0.2s;
-}
-
-.user-item:hover {
-  background-color: #FFF9C4;
-}
-
 .user-status {
   display: inline-block;
   width: 10px;
@@ -174,9 +182,10 @@ p {
   width: 550px;
   background: white;
   border-radius: 15px;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
   z-index: 1000;
-  display: none; /* hidden by default */
+  display: none;
+  /* hidden by default */
   flex-direction: column;
   border: 3px solid #FFC107;
 }
@@ -270,14 +279,21 @@ p {
 }
 
 /* User list clickable items */
-.user-item.online {
+.user-item {
   cursor: pointer;
+  transition: all 0.2s;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 10px;
+  margin-bottom: 5px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
   transition: all 0.2s;
 }
 
-.user-item.online:hover {
-  color: #FF5722;
-  transform: translateX(5px);
+.user-item:hover {
+  background-color: #FFF9C4;
 }
 
 /* Form styles */
@@ -319,7 +335,9 @@ form::before {
   margin-right: 0;
 }
 
-input, select, button {
+input,
+select,
+button {
   display: block;
   width: 100%;
   padding: 15px;
@@ -333,7 +351,8 @@ input, select, button {
   transition: all 0.3s;
 }
 
-input:focus, select:focus {
+input:focus,
+select:focus {
   outline: none;
   border-color: #FF5722;
   background-color: #FFF9C4;
@@ -395,20 +414,22 @@ a:hover {
 /* Responsive design */
 @media (max-width: 600px) {
   h1 {
-      font-size: 2em;
+    font-size: 2em;
   }
-  
+
   form {
-      padding: 20px;
+    padding: 20px;
   }
-  
-  input, select, button {
-      padding: 10px;
+
+  input,
+  select,
+  button {
+    padding: 10px;
   }
-  
+
   h1::after {
-      right: -30px;
-      font-size: 0.8em;
+    right: -30px;
+    font-size: 0.8em;
   }
 }
 
@@ -418,10 +439,19 @@ form:hover::before {
 }
 
 @keyframes hatch {
-  0% { transform: rotate(30deg) scale(1); opacity: 0.3; }
-  50% { transform: rotate(0deg) scale(1.5); opacity: 0.6; }
-  100% { transform: rotate(0deg) scale(1); opacity: 1; content: "🐥"; }
+  0% {
+    transform: rotate(30deg) scale(1);
+    opacity: 0.3;
+  }
+
+  50% {
+    transform: rotate(0deg) scale(1.5);
+    opacity: 0.6;
+  }
+
+  100% {
+    transform: rotate(0deg) scale(1);
+    opacity: 1;
+    content: "🐥";
+  }
 }
-
-
-
