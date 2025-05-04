@@ -1,4 +1,4 @@
-let currentChatPartner = null;
+export let currentChatPartner = null;
 let showingOnlineUsers = true;
 
 export function updateUsersList(users, onlineOnly = true) {
@@ -9,14 +9,19 @@ export function updateUsersList(users, onlineOnly = true) {
 
     const currentUserId = currentUser?.id;
 
-    users.forEach(user => {
+    // Filter if necessary to display only online users
+    const usersToDisplay = onlineOnly ? users.filter(user => user.is_online) : users;
+
+    usersToDisplay.forEach(user => {
         const item = document.createElement("li");
-        // On garde la classe online/offline pour le style visuel
+        // Keep the online/offline class for visual styling
         item.className = `user-item ${user.is_online ? 'online' : 'offline'}`;
+        
+        // Always store the ID and username
         item.dataset.userId = user.id;
         item.dataset.username = user.username;
 
-        // Rendre cliquable tous les utilisateurs sauf l'actuel
+        // Make all users clickable except the current user
         if (user.id !== currentUserId) {
             item.style.cursor = 'pointer';
             item.addEventListener('click', () => {
@@ -52,7 +57,7 @@ export function sendMessage() {
             content: content
         }));
 
-        // Afficher le message immédiatement
+        // Display the message immediately
         displayMessage({
             sender_id: currentUser.id,
             content: content,
@@ -63,18 +68,32 @@ export function sendMessage() {
     }
 }
 
-// Fonction pour afficher les messages
+// Function to display messages
 export function displayMessage(msg) {
     const chatDiv = document.getElementById("chat-messages");
     if (!chatDiv) return;
 
+    // Add logs for debugging
+    console.log("Displaying message:", msg);
+    console.log("Current chat partner:", currentChatPartner);
+    
     // Check if the message is sent or received
     const isSentByMe = msg.sender_id === currentUser.id;
 
     const messageElement = document.createElement("div");
     messageElement.className = isSentByMe ? "message sent" : "message received";
 
-    // Nom à afficher (optionnel)
+    // Add a data attribute with the sender ID for easier filtering
+    messageElement.dataset.senderId = msg.sender_id;
+    
+    // Also add an attribute for the conversation
+    if (currentChatPartner && currentChatPartner.id) {
+        messageElement.dataset.conversationId = isSentByMe 
+            ? `${currentUser.id}-${currentChatPartner.id}` 
+            : `${msg.sender_id}-${currentUser.id}`;
+    }
+
+    // Display name (optional)
     const displayName = isSentByMe ? currentUser.username : currentChatPartner?.username || "Other user";
 
     messageElement.innerHTML = `
@@ -85,29 +104,42 @@ export function displayMessage(msg) {
     chatDiv.scrollTop = chatDiv.scrollHeight;
 }
 
-// Fonction pour charger l'historique
+// Function to load message history
 export async function loadMessageHistory(userId) {
     try {
+        // Check that the ID exists
+        if (!userId) {
+            console.error("User ID is undefined or null");
+            document.getElementById("chat-messages").innerHTML = 
+                '<div class="error-message">Invalid user ID</div>';
+            return;
+        }
+
+        console.log("Loading message history for user ID:", userId);
+        
         const response = await fetch(`/messages?user_id=${userId}`, {
-            credentials: 'include' // Important pour les cookies
+            credentials: 'include' // Important for cookies
         });
 
         if (!response.ok) {
-            throw new Error("Échec du chargement des messages");
+            throw new Error("Failed to load messages");
         }
 
         const data = await response.json();
         const chatDiv = document.getElementById("chat-messages");
 
         if (!chatDiv) {
-            console.error("Conteneur des messages introuvable");
+            console.error("Message container not found");
             return;
         }
 
+        // Clear the container before adding new messages
         chatDiv.innerHTML = "";
 
-        // Vérifie si `data` est un tableau avant d'utiliser `forEach`
-        if (Array.isArray(data)) {
+        // Check if `data` is an array before using `forEach`
+        if (Array.isArray(data) && data.length > 0) {
+            console.log(`Displaying ${data.length} messages for user ${userId}`);
+            
             data.forEach(msg => {
                 displayMessage({
                     sender_id: msg.sender_id,
@@ -116,27 +148,38 @@ export async function loadMessageHistory(userId) {
                 });
             });
         } else {
-            console.warn("Aucun message trouvé ou format invalide");
-            // Affiche un message à l'utilisateur
+            console.warn("No messages found or invalid format");
+            // Display a message to the user
             const noMessages = document.createElement("div");
             noMessages.className = "no-messages";
-            noMessages.textContent = "Aucun message. Commencez la conversation !";
+            noMessages.textContent = "No messages. Start the conversation!";
             chatDiv.appendChild(noMessages);
         }
     } catch (error) {
-        console.error("Erreur lors du chargement des messages :", error);
-        // Affiche l'erreur à l'utilisateur
+        console.error("Error loading messages:", error);
+        // Display the error to the user
         const errorDiv = document.createElement("div");
         errorDiv.className = "error-message";
-        errorDiv.textContent = "Impossible de charger les messages. Réessayez.";
+        errorDiv.textContent = "Unable to load messages. Please try again.";
         document.getElementById("chat-messages").appendChild(errorDiv);
     }
 }
 
 
 export function openChat(userId, username) {
+    // Check that the ID and username are defined
+    if (!userId || !username) {
+        console.error("Invalid userId or username:", { userId, username });
+        return;
+    }
+    
     console.log("Opening chat with:", userId, username);
-    currentChatPartner = { id: userId, username };
+    
+    // Always ensure the ID is a string
+    const id = String(userId);
+    
+    // Set the current chat partner
+    currentChatPartner = { id: id, username: username };
 
     const chatModal = document.getElementById("chat-modal");
     const partnerName = document.getElementById("chat-partner-name");
@@ -144,63 +187,39 @@ export function openChat(userId, username) {
     if (chatModal && partnerName) {
         partnerName.textContent = username;
         chatModal.style.display = "flex";
-        loadMessageHistory(userId);
+        
+        // Load message history
+        loadMessageHistory(id);
     } else {
         console.error("Chat modal elements not found!");
     }
 }
 
-// Fonction pour fermer le chat
+// Function to close the chat
 export function closeChat() {
     const chatModal = document.getElementById("chat-modal");
     if (chatModal) {
-        chatModal.style.display = "none"; // Changement ici
+        chatModal.style.display = "none"; // Change here
     }
     currentChatPartner = null;
 }
 
-// Initialisation du chat
+// Chat initialization
 export function initChat() {
     console.log("Initializing chat system...");
 
-    // Gestion améliorée des clics
+    // Improved click handling
     document.addEventListener('click', function (e) {
         const userItem = e.target.closest('.user-item');
-    if (!userItem) return;
+        if (!userItem) return;
 
-        // Essai progressif pour récupérer les données
-        let userId, username;
-
-        // Essai 1: Propriété userData
-        if (userItem.userData) {
-            userId = userItem.userData.id;
-            username = userItem.userData.username;
-        }
-
-        // Essai 2: Dataset
-        if ((!userId || !username) && userItem.dataset) {
-            userId = userItem.dataset.userId;
-            username = userItem.dataset.username;
-        }
-
-        // Essai 3: Attributs HTML
-        if ((!userId || !username)) {
-            userId = userItem.getAttribute('data-user-id');
-            username = userItem.getAttribute('data-username');
-        }
-
-        // Essai 4: TextContent comme dernier recours
-        if ((!userId || !username)) {
-            const nameDiv = userItem.querySelector('.user-name');
-            if (nameDiv) {
-                username = nameDiv.textContent;
-                // On ne peut pas récupérer l'ID dans ce cas
-            }
-        }
+        // Retrieve directly from dataset (more reliable)
+        const userId = userItem.dataset.userId;
+        const username = userItem.dataset.username;
 
         if (!userId || !username) {
             console.error("Failed to retrieve user data from:", userItem);
-            console.dir(userItem); // Inspection complète de l'élément
+            console.dir(userItem);
             return;
         }
 
@@ -208,14 +227,14 @@ export function initChat() {
         openChat(userId, username);
     });
 
-    // Initialisation des éléments du chat
+    // Initialize chat elements
     const chatModal = document.getElementById('chat-modal');
     if (!chatModal) {
         console.error("Chat modal container not found!");
         return;
     }
 
-    // Bouton d'envoi de message
+    // Send message button
     const sendBtn = document.getElementById('send-message-btn');
     if (sendBtn) {
         sendBtn.addEventListener('click', sendMessage);
@@ -223,7 +242,7 @@ export function initChat() {
         console.error("Send message button not found");
     }
 
-    // Champ de saisie de message
+    // Message input field
     const messageInput = document.getElementById('message-input');
     if (messageInput) {
         messageInput.addEventListener('keypress', (e) => {
@@ -235,13 +254,13 @@ export function initChat() {
         console.error("Message input field not found");
     }
 
-    // Bouton de fermeture (alternative si le gestionnaire de document.click ne marche pas)
+    // Close button
     const closeBtn = document.querySelector('.close-chat');
     if (closeBtn) {
         closeBtn.addEventListener('click', closeChat);
     }
 
-    // Vérification finale
+    // Final check
     console.log("Chat system initialized with:", {
         modal: chatModal,
         sendBtn: sendBtn,
@@ -274,7 +293,7 @@ export function handleUserStatusChange(message) {
     });
 
     if (!userFound && message.status === "online" && showingOnlineUsers) {
-        // Ajouter le nouvel utilisateur en ligne
+        // Add the new online user
         const item = document.createElement("li");
         item.className = "user-item online";
         item.dataset.userId = message.user_id;
@@ -291,4 +310,4 @@ export function handleUserStatusChange(message) {
         item.appendChild(nameDiv);
         usersList.appendChild(item);
     }
-  }
+}

@@ -80,7 +80,7 @@ export const routes = {
         </div>
     </div>
 
-    <!-- hidden chat by default -->
+    <!-- Hidden chat by default -->
          <div id="chat-modal">
           <div class="chat-header">
               <h3>Chat with <span id="chat-partner-name"></span></h3>
@@ -173,7 +173,6 @@ function setupUserListToggle() {
 }
 
 function loadOnlineUsers() {
-  // Utilisez votre fonction existante pour charger les utilisateurs en ligne
   fetch('/online-users')
       .then(response => response.json())
       .then(users => {
@@ -181,29 +180,38 @@ function loadOnlineUsers() {
       });
 }
 
-function loadAllUsers() {
+export function loadAllUsers() {
   fetch('/users', {
-    method: 'GET',
-    headers: {
-      'Accept': 'application/json',
-    },
-    credentials: 'include'
+      method: 'GET',
+      headers: {
+          'Accept': 'application/json',
+      },
+      credentials: 'include'
   })
   .then(response => {
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-    return response.json();
+      console.log("Response status:", response.status);
+      if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      return response.json();
   })
   .then(users => {
-    if (users && users.length > 0) {
-      updateUsersList(users, false); // false pour afficher tous les utilisateurs
-    } else {
-      document.querySelector('.users-list').innerHTML = '<li>No users found</li>';
-    }
+      console.log("Received users data:", users);
+      if (users && users.length > 0) {
+          // Ensure all users have an is_online property
+          const usersWithStatus = users.map(user => ({
+              ...user,
+              is_online: user.is_online || false // Default to false if not defined
+          }));
+          updateUsersList(usersWithStatus, false);
+      } else {
+          console.log("No users found");
+          document.querySelector('.users-list').innerHTML = '<li>No users found</li>';
+      }
   })
   .catch(error => {
-    document.querySelector('.users-list').innerHTML = `<li>Error loading users: ${error.message}</li>`;
+      console.error('Error fetching all users:', error);
+      document.querySelector('.users-list').innerHTML = `<li>Error loading users: ${error.message}</li>`;
   });
 }
 
@@ -217,7 +225,7 @@ export function toggleUserList(showOnline) {
   }
 }
 
-// Fonctions pour récupérer les utilisateurs
+// Functions to fetch users
 function fetchOnlineUsers() {
   if (window.websocket) {
       window.websocket.send(JSON.stringify({
@@ -270,7 +278,8 @@ import {
   openChat,
   closeChat,
   initChat,
-  handleUserStatusChange
+  handleUserStatusChange,
+  currentChatPartner,
 } from "./chat.js"
 
 // Verify if the session is still active
@@ -280,9 +289,6 @@ function checkSession() {
       console.log("Session check response:", response);
       if (response.ok) {
         return response.json(); // Get user data from response
-        // console.log("Session is active");
-        // updateNavigation(true);
-        // navigateTo("home");
       } else {
         console.log("Session is not active");
         updateNavigation(false);
@@ -308,20 +314,6 @@ function checkSession() {
 
 export function updateNavigation(isAuthenticated) {
   const nav = document.getElementById("logout-button");
-
-  // if (isAuthenticated) {
-  //   nav.innerHTML = `
-  //         <button onclick="logout()">Logout</button>
-  //         <button onclick="goToHome()">Home</button>
-  //     `;
-  // } 
-  // else {
-  //   nav.innerHTML = `
-  //         <button onclick="navigateTo('login')">Login</button>
-  //         <button onclick="navigateTo('register')">Register</button>
-  //         <button onclick="goToHome()">Home</button>
-  //     `;
-  // }
 }
 
 // Function to navigate to the home page
@@ -355,22 +347,37 @@ function initializeWebSocket() {
     console.log("WebSocket message received:", message);
 
     switch (message.type) {
-      case "online_users":
-        console.log("Raw users data:", JSON.stringify(message.users));
-        updateOnlineUsersList(message.users);
-        break;
-      case "user_status":
-        handleUserStatusChange(message);
-        break;
-      case "private_message":
-        // check if right chat is open
-        if (currentChatPartner && currentChatPartner.id === message.sender_id) {
-          displayMessage(message);
-        } else {
-          // Notif
-          console.log("New message from:", message.sender_id);
-        }
-        break;
+        case "online_users":
+            updateUsersList(message.users);
+            break;
+        case "user_status":
+            handleUserStatusChange(message);
+            break;
+        case "private_message":
+            // Check if the message is intended for the current user
+            // OR if it comes from the current chat partner
+            if (message.receiver_id === currentUser?.id || 
+                (currentChatPartner && message.sender_id === currentChatPartner.id)) {
+                
+                // Check if we are in the correct conversation to display the message
+                const isCorrectConversation = 
+                    currentChatPartner && 
+                    (message.sender_id === currentChatPartner.id || 
+                    message.receiver_id === currentChatPartner.id);
+                
+                if (isCorrectConversation) {
+                    displayMessage({
+                        sender_id: message.sender_id,
+                        content: message.content,
+                        timestamp: message.timestamp || Date.now()
+                    });
+                } else {
+                    // Notification for a new message
+                    console.log("New message from:", message.sender_id);
+                    // You could add a UI notification here
+                }
+            }
+            break;
     }
   };
 
@@ -381,9 +388,3 @@ function initializeWebSocket() {
 
   window.websocket = socket;
 }
-
-// // Call this when the user logs in
-// function initializeAfterLogin() {
-//   // Initialize WebSocket connection
-//   initializeWebSocket();
-// }
