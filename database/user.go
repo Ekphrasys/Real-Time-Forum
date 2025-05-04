@@ -150,3 +150,45 @@ func GetUserByID(userID string) (*models.User, error) {
 	fmt.Printf("Found user: %+v\n", user)
 	return &user, nil
 }
+
+// GetAllUsers retrieves all registered users from the database
+func GetAllUsers() ([]models.User, error) {
+	// Create a slice to hold the users
+	var users []models.User
+
+	// Query the database for all users
+	rows, err := DB.Query(`
+        SELECT user_id, username, email, first_name, last_name, age, gender, creation_date 
+        FROM user 
+        ORDER BY username ASC`)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query users: %w", err)
+	}
+	defer rows.Close()
+
+	// Iterate through the result set
+	for rows.Next() {
+		var user models.User
+		err := rows.Scan(
+			&user.Id,
+			&user.Username,
+			&user.Email,
+			&user.FirstName,
+			&user.LastName,
+			&user.Age,
+			&user.Gender,
+			&user.CreationDate,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan user row: %w", err)
+		}
+		users = append(users, user)
+	}
+
+	// Check for errors from iterating over rows
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error after iterating rows: %w", err)
+	}
+
+	return users, nil
+}

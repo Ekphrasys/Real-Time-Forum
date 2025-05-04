@@ -1,63 +1,116 @@
 let currentChatPartner = null;
+let showingOnlineUsers = true;
 
-// Modifiez la fonction updateOnlineUsersList pour rendre les utilisateurs cliquables
-export function updateOnlineUsersList(users) {
+export function updateUsersList(users, onlineOnly = true) {
     const usersList = document.querySelector(".users-list");
     if (!usersList) {
         console.error("Users list element not found!");
         return;
     }
 
-    // Nettoyage complet de la liste
     usersList.innerHTML = '';
 
-    // Filtrage des utilisateurs
-    const otherUsers = users.filter(user => user.id !== currentUser?.id);
+    // Debug: Affiche les données reçues
+    console.log("Users received:", users);
+    console.log("Current user:", currentUser);
+
+    // Ne filtrez PAS les utilisateurs - affichez tous les utilisateurs
+    // const otherUsers = users.filter(user => user.id !== currentUser?.id);
+    const otherUsers = users; // Affiche tous les utilisateurs
 
     if (otherUsers.length === 0) {
         const item = document.createElement("li");
         item.className = "user-item";
-        item.textContent = "No other users online";
+        item.textContent = onlineOnly ? "No users online" : "No users found";
         usersList.appendChild(item);
         return;
     }
 
-    // Création des éléments utilisateur
     otherUsers.forEach(user => {
         const item = document.createElement("li");
-        item.className = "user-item online";
-
-        // Méthode 1: Attributs data-*
-        item.setAttribute('data-user-id', user.id);
-        item.setAttribute('data-username', user.username);
-
-        // Méthode 2: Propriété dataset
+        item.className = `user-item ${user.is_online ? 'online' : ''}`;
         item.dataset.userId = user.id;
         item.dataset.username = user.username;
 
-        // Méthode 3: Stockage direct
-        item.userData = user;
-
-        // Création du contenu
         const nameDiv = document.createElement("div");
         nameDiv.className = "user-name";
         nameDiv.textContent = user.username;
 
+        // Ajoutez un indicateur de statut
+        const statusDiv = document.createElement("div");
+        statusDiv.className = `user-status ${user.is_online ? 'online' : 'offline'}`;
+        
+        item.prepend(statusDiv);
         item.appendChild(nameDiv);
-        usersList.appendChild(item);
+        
+        // Rendre cliquable seulement si différent de l'utilisateur courant
+        if (user.id !== currentUser?.id) {
+            item.style.cursor = 'pointer';
+            item.addEventListener('click', () => openChat(user.id, user.username));
+        }
 
-        // Vérification immédiate
-        console.log(`User item created:`, {
-            element: item,
-            dataset: item.dataset,
-            attributes: {
-                id: item.getAttribute('data-user-id'),
-                username: item.getAttribute('data-username')
-            },
-            userData: item.userData
-        });
+        usersList.appendChild(item);
     });
 }
+
+// // Modifiez la fonction updateOnlineUsersList pour rendre les utilisateurs cliquables
+// export function updateOnlineUsersList(users) {
+//     const usersList = document.querySelector(".users-list");
+//     if (!usersList) {
+//         console.error("Users list element not found!");
+//         return;
+//     }
+
+//     // Nettoyage complet de la liste
+//     usersList.innerHTML = '';
+
+//     // Filtrage des utilisateurs
+//     const otherUsers = users.filter(user => user.id !== currentUser?.id);
+
+//     if (otherUsers.length === 0) {
+//         const item = document.createElement("li");
+//         item.className = "user-item";
+//         item.textContent = "No other users online";
+//         usersList.appendChild(item);
+//         return;
+//     }
+
+//     // Création des éléments utilisateur
+//     otherUsers.forEach(user => {
+//         const item = document.createElement("li");
+//         item.className = "user-item online";
+
+//         // Méthode 1: Attributs data-*
+//         item.setAttribute('data-user-id', user.id);
+//         item.setAttribute('data-username', user.username);
+
+//         // Méthode 2: Propriété dataset
+//         item.dataset.userId = user.id;
+//         item.dataset.username = user.username;
+
+//         // Méthode 3: Stockage direct
+//         item.userData = user;
+
+//         // Création du contenu
+//         const nameDiv = document.createElement("div");
+//         nameDiv.className = "user-name";
+//         nameDiv.textContent = user.username;
+
+//         item.appendChild(nameDiv);
+//         usersList.appendChild(item);
+
+//         // Vérification immédiate
+//         console.log(`User item created:`, {
+//             element: item,
+//             dataset: item.dataset,
+//             attributes: {
+//                 id: item.getAttribute('data-user-id'),
+//                 username: item.getAttribute('data-username')
+//             },
+//             userData: item.userData
+//         });
+//     });
+// }
 
 export function sendMessage() {
     if (!currentChatPartner) return;
@@ -281,28 +334,43 @@ export function initChat() {
 
 // Handle user status change
 export function handleUserStatusChange(message) {
+    if (!showingOnlineUsers) return;
+    
     const usersList = document.querySelector(".users-list");
     if (!usersList) return;
-  
-    // Check if user already in list
-    const existingUser = Array.from(
-      usersList.querySelectorAll(".user-item")
-    ).find((item) => item.textContent === message.username);
-  
-    if (message.status === "online") {
-      // Add user if not already in list
-      if (!existingUser) {
-        const listItem = document.createElement("li");
-        listItem.className = "user-item online";
-        listItem.textContent = message.username;
-        usersList.appendChild(listItem);
-      } else {
-        existingUser.classList.add("online");
-      }
-    } else if (message.status === "offline") {
-      // Remove online class if user exists
-      if (existingUser) {
-        existingUser.classList.remove("online");
-      }
+
+    const userItems = usersList.querySelectorAll(".user-item");
+    let userFound = false;
+
+    userItems.forEach(item => {
+        if (item.dataset.userId === message.user_id) {
+            userFound = true;
+            if (message.status === "online") {
+                item.classList.add("online");
+                item.querySelector('.user-status').className = 'user-status online';
+            } else {
+                item.classList.remove("online");
+                item.querySelector('.user-status').className = 'user-status offline';
+            }
+        }
+    });
+
+    if (!userFound && message.status === "online" && showingOnlineUsers) {
+        // Ajouter le nouvel utilisateur en ligne
+        const item = document.createElement("li");
+        item.className = "user-item online";
+        item.dataset.userId = message.user_id;
+        item.dataset.username = message.username;
+
+        const statusDiv = document.createElement("div");
+        statusDiv.className = "user-status online";
+        
+        const nameDiv = document.createElement("div");
+        nameDiv.className = "user-name";
+        nameDiv.textContent = message.username;
+
+        item.appendChild(statusDiv);
+        item.appendChild(nameDiv);
+        usersList.appendChild(item);
     }
   }

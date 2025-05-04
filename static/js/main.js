@@ -51,7 +51,10 @@ export const routes = {
    
         <div class="main-content">
         <div class="users-container">
-            <h3 class="users-title">Currently Online</h3>
+              <div class="user-list-toggle">
+                <button id="show-online-users" class="active">Online Users</button>
+                <button id="show-all-users">All Users</button>
+              </div>
             <ul class="users-list">
               <!-- List dynamically -->
             </ul>
@@ -150,7 +153,101 @@ export function navigateTo(page) {
     setupPostForm();
     loadPosts();
     initChat();
+    setupUserListToggle();
+    fetchOnlineUsers();
   }
+}
+
+function setupUserListToggle() {
+  document.getElementById('show-online-users')?.addEventListener('click', function() {
+      this.classList.add('active');
+      document.getElementById('show-all-users').classList.remove('active');
+      loadOnlineUsers();
+  });
+
+  document.getElementById('show-all-users')?.addEventListener('click', function() {
+      this.classList.add('active');
+      document.getElementById('show-online-users').classList.remove('active');
+      loadAllUsers();
+  });
+}
+
+function loadOnlineUsers() {
+  // Utilisez votre fonction existante pour charger les utilisateurs en ligne
+  fetch('/online-users')
+      .then(response => response.json())
+      .then(users => {
+          updateUsersList(users, true);
+      });
+}
+
+function loadAllUsers() {
+  console.log("Fetching all users...");
+  fetch('/users', {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+    },
+    credentials: 'include'
+  })
+  .then(response => {
+    console.log("Response status:", response.status);
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    return response.json();
+  })
+  .then(users => {
+    console.log("Received users data:", users);
+    if (users && users.length > 0) {
+      updateUsersList(users, false);
+    } else {
+      console.log("No users found");
+      document.querySelector('.users-list').innerHTML = '<li>No users found</li>';
+    }
+  })
+  .catch(error => {
+    console.error('Error fetching all users:', error);
+    document.querySelector('.users-list').innerHTML = `<li>Error loading users: ${error.message}</li>`;
+  });
+}
+
+export function toggleUserList(showOnline) {
+  showingOnlineUsers = showOnline;
+  
+  if (showOnline) {
+      fetchOnlineUsers();
+  } else {
+      fetchAllUsers();
+  }
+}
+
+// Fonctions pour récupérer les utilisateurs
+function fetchOnlineUsers() {
+  if (window.websocket) {
+      window.websocket.send(JSON.stringify({
+          type: "get_online_users"
+      }));
+  }
+}
+
+function fetchAllUsers() {
+  console.log("Fetching all users...");
+  fetch('/users')
+      .then(response => {
+          console.log("Response status:", response.status);
+          if (!response.ok) {
+              throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+          return response.json();
+      })
+      .then(users => {
+          console.log("Received users data:", users);
+          updateUsersList(users, false);
+      })
+      .catch(error => {
+          console.error('Error fetching all users:', error);
+      });
 }
 
 window.navigateTo = navigateTo;
@@ -173,7 +270,7 @@ import {
 } from "./posts.js";
 
 import {
-  updateOnlineUsersList,
+  updateUsersList,
   displayMessage,
   openChat,
   closeChat,
@@ -249,11 +346,8 @@ window.viewPost = viewPost;
 
 function initializeWebSocket() {
   if (window.websocket) {
-    // Already connected
-    return;
+    return; // Already connected
   }
-
-  // const socket = new WebSocket("ws://localhost:8080/ws");
 
   const socket = new WebSocket("ws://" + window.location.host + "/ws");
 

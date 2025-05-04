@@ -75,13 +75,13 @@ p {
 }
 
 .users-container {
-  flex: 1; /* Takes up 1 fraction of available space */
+  flex: 1; /* Takes up 1/3rd of space */
   max-width: 30%; /* Limits width to 30% of parent */
   margin: 0; /* Remove auto margin to allow left alignment */
 }
 
 .posts-container {
-  flex: 2; /* Takes up 2 fractions of available space (twice as wide as users) */
+  flex: 2; /* Takes up 2/3rd (twice as wide as users) */
   max-width: 65%; /* Limits width to 65% of parent */
   margin: 0; /* Remove auto margin to allow right alignment */
 }
@@ -97,6 +97,73 @@ p {
 
 #post-content {
   height : 200px !important
+}
+
+/* User list toggle styles */
+.user-list-toggle {
+  display: flex;
+  margin-bottom: 15px;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 3px solid #FFC107;
+}
+
+.user-list-toggle button {
+  flex: 1;
+  margin: 0;
+  border-radius: 0;
+  padding: 8px;
+  background-color: #FFFDE7;
+  color: #FF5722;
+  border: none;
+  transition: none;
+}
+
+.user-list-toggle button.active {
+  background-color: #FF5722;
+  color: white;
+}
+
+.user-list-toggle button:hover {
+  background-color: #FF9800;
+  color: white;
+  transform: none;
+}
+
+/* User list styles */
+.users-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.user-item {
+  padding: 10px;
+  margin-bottom: 5px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.user-item:hover {
+  background-color: #FFF9C4;
+}
+
+.user-status {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.user-status.online {
+  background-color: #4CAF50;
+}
+
+.user-status.offline {
+  background-color: #9E9E9E;
 }
 
 /* Chat styles */
@@ -303,20 +370,6 @@ button:hover {
 button:active {
   transform: scale(0.9);
   transition: all 100ms ease;
-}
-
-button::after {
-  content: "";
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
-  transform: scale(0);
-  opacity: 0;
-  transition: transform 0.5s, opacity 1s;
-  z-index: -1;
 }
 
 button:hover::after {
