@@ -111,7 +111,21 @@ func HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 		}
 		log.Printf("Message received from %s: %s", userID, string(message))
 
-		// Handle different message types here
+		// Determine message type
+		var msgType struct {
+			Type string `json:"type"`
+		}
+		if err := json.Unmarshal(message, &msgType); err != nil {
+			log.Printf("Error decoding message type: %v", err)
+			continue
+		}
+
+		switch msgType.Type {
+		case PrivateMessage:
+			handlePrivateMessage(conn, userID, message)
+		default:
+			log.Printf("Unknown message type: %s", msgType.Type)
+		}
 	}
 }
 

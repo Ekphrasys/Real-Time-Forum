@@ -34,8 +34,15 @@ type Comment struct {
 	Username     string    `json:"username"`
 }
 
-// Add to your models.go file
 type PostWithComments struct {
 	Post     Post      `json:"post"`
 	Comments []Comment `json:"comments"`
+}
+
+type Message struct {
+	Type       string `json:"type"`
+	SenderID   string `json:"sender_id"`
+	ReceiverID string `json:"receiver_id"`
+	Content    string `json:"content"`
+	SentAt     int    `json:"sent_at"`
 }

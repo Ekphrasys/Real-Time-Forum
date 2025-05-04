@@ -37,17 +37,6 @@ CREATE TABLE IF NOT EXISTS User (
    name VARCHAR(50) NOT NULL UNIQUE
  );
  
- CREATE TABLE IF NOT EXISTS User_Like (
-   like_id CHAR(32) PRIMARY KEY,
-   isLiked BOOLEAN NOT NULL,
-   user_id CHAR(32) NOT NULL,
-   post_id CHAR(32), -- If the user likes a post
-   comment_id CHAR(32), -- If the user likes a comment
-   FOREIGN KEY (user_id) REFERENCES User(user_id),
-   FOREIGN KEY (post_id) REFERENCES Post(post_id),
-   FOREIGN KEY (comment_id) REFERENCES Comment(comment_id)
- );
- 
  CREATE TABLE IF NOT EXISTS Post_Category (
    post_id CHAR(32),
    category_id CHAR(32),
@@ -65,3 +54,12 @@ CREATE TABLE IF NOT EXISTS session (
     FOREIGN KEY (user_id) REFERENCES user(user_id)
 );
 
+CREATE TABLE IF NOT EXISTS messages (
+    id INTEGER PRIMARY KEY,
+    sender_id TEXT NOT NULL,
+    receiver_id TEXT NOT NULL,
+    content TEXT NOT NULL,
+    sent_at DATETIME NOT NULL,
+    FOREIGN KEY (sender_id) REFERENCES User(user_id),
+    FOREIGN KEY (receiver_id) REFERENCES User(user_id)
+);

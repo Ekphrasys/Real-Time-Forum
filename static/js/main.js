@@ -43,9 +43,8 @@ export const routes = {
       <header>
           <h1>Holy Chicken Order</h1>
             <div class="user-info">
-          <p id="welcome">Welcome, ${
-            window.currentUser ? currentUser.username : "Guest"
-          }</p>
+          <p id="welcome">Welcome, ${window.currentUser ? currentUser.username : "Guest"
+      }</p>
               <button id="logout-button" onclick="console.log('Button clicked'); logout();">Logout</button>
             </div>
       </header>
@@ -54,9 +53,7 @@ export const routes = {
         <div class="users-container">
             <h3 class="users-title">Currently Online</h3>
             <ul class="users-list">
-            <li class="user-item">${
-              window.currentUser ? currentUser.username : "Guest"
-            }</li>
+              <!-- List dynamically -->
             </ul>
         </div>
 
@@ -79,6 +76,19 @@ export const routes = {
             </div>
         </div>
     </div>
+
+    <!-- hidden chat by default -->
+         <div id="chat-modal">
+          <div class="chat-header">
+              <h3>Chat with <span id="chat-partner-name"></span></h3>
+              <button class="close-chat">×</button>
+          </div>
+          <div class="chat-messages" id="chat-messages"></div>
+          <div class="chat-input">
+              <input type="text" id="message-input" placeholder="Type your message...">
+              <button id="send-message-btn">Send</button>
+          </div>
+      </div>
     `;
   },
   "post-detail": function (postId) {
@@ -86,9 +96,8 @@ export const routes = {
       <header>
         <h1>Holy Chicken Order</h1>
         <div class="user-info">
-          <p id="welcome">Welcome, ${
-            window.currentUser ? window.currentUser.username : "Guest"
-          }</p>
+          <p id="welcome">Welcome, ${window.currentUser ? window.currentUser.username : "Guest"
+      }</p>
           <button onclick="navigateTo('home')">Back to Forum</button>
           <button id="logout-button" onclick="console.log('Button clicked'); logout();">Logout</button>
         </div>
@@ -140,10 +149,16 @@ export function navigateTo(page) {
   if (page === "home") {
     setupPostForm();
     loadPosts();
+    initChat();
   }
 }
 
 window.navigateTo = navigateTo;
+
+// Expose chat functions globally for chat
+window.openChat = openChat;
+window.closeChat = closeChat;
+window.initChat = initChat;
 
 import {
   attachLoginEventListener,
@@ -151,11 +166,20 @@ import {
   logout,
 } from "./auth.js";
 
-import { 
+import {
   loadPosts,
   setupPostForm,
   viewPost,
 } from "./posts.js";
+
+import {
+  updateOnlineUsersList,
+  displayMessage,
+  openChat,
+  closeChat,
+  initChat,
+  handleUserStatusChange
+} from "./chat.js"
 
 // Verify if the session is still active
 function checkSession() {
@@ -229,7 +253,9 @@ function initializeWebSocket() {
     return;
   }
 
-  const socket = new WebSocket("ws://localhost:8080/ws");
+  // const socket = new WebSocket("ws://localhost:8080/ws");
+
+  const socket = new WebSocket("ws://" + window.location.host + "/ws");
 
   socket.onopen = function () {
     console.log("WebSocket connection established");
@@ -239,10 +265,23 @@ function initializeWebSocket() {
     const message = JSON.parse(event.data);
     console.log("WebSocket message received:", message);
 
-    if (message.type === "online_users") {
-      updateOnlineUsersList(message.users);
-    } else if (message.type === "user_status") {
-      handleUserStatusChange(message);
+    switch (message.type) {
+      case "online_users":
+        console.log("Raw users data:", JSON.stringify(message.users));
+        updateOnlineUsersList(message.users);
+        break;
+      case "user_status":
+        handleUserStatusChange(message);
+        break;
+      case "private_message":
+        // check if right chat is open
+        if (currentChatPartner && currentChatPartner.id === message.sender_id) {
+          displayMessage(message);
+        } else {
+          // Notif
+          console.log("New message from:", message.sender_id);
+        }
+        break;
     }
   };
 
@@ -254,61 +293,8 @@ function initializeWebSocket() {
   window.websocket = socket;
 }
 
-// Update online users list
-function updateOnlineUsersList(users) {
-  const usersList = document.querySelector(".users-list");
-  if (!usersList) return;
-
-  // Clear current list
-  usersList.innerHTML = "";
-
-  // Add all online users
-  users.forEach((user) => {
-    const listItem = document.createElement("li");
-    listItem.className = "user-item online";
-    listItem.textContent = user.username;
-    usersList.appendChild(listItem);
-  });
-
-  // If no online users other than current user
-  if (users.length <= 1) {
-    const listItem = document.createElement("li");
-    listItem.className = "user-item";
-    listItem.textContent = "No other users online";
-    usersList.appendChild(listItem);
-  }
-}
-
-// Handle user status change
-function handleUserStatusChange(message) {
-  const usersList = document.querySelector(".users-list");
-  if (!usersList) return;
-
-  // Check if user already in list
-  const existingUser = Array.from(
-    usersList.querySelectorAll(".user-item")
-  ).find((item) => item.textContent === message.username);
-
-  if (message.status === "online") {
-    // Add user if not already in list
-    if (!existingUser) {
-      const listItem = document.createElement("li");
-      listItem.className = "user-item online";
-      listItem.textContent = message.username;
-      usersList.appendChild(listItem);
-    } else {
-      existingUser.classList.add("online");
-    }
-  } else if (message.status === "offline") {
-    // Remove online class if user exists
-    if (existingUser) {
-      existingUser.classList.remove("online");
-    }
-  }
-}
-
-// Call this when the user logs in
-function initializeAfterLogin() {
-  // Initialize WebSocket connection
-  initializeWebSocket();
-}
+// // Call this when the user logs in
+// function initializeAfterLogin() {
+//   // Initialize WebSocket connection
+//   initializeWebSocket();
+// }
