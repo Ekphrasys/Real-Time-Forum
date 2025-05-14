@@ -4,13 +4,10 @@ import { routes } from "./main.js";
 export function loadPosts() {
     fetch("/posts", { method: "GET", credentials: "include" })
         .then((response) => {
-            console.log("Posts response status:", response.status);
             return response.json();
         })
         .then((posts) => {
-            console.log("Posts received:", posts);
             const postsContainer = document.querySelector(".posts");
-            console.log("Posts container found:", !!postsContainer);
 
             if (!postsContainer) {
                 console.error("Posts container not found!");
@@ -87,19 +84,11 @@ export function loadPosts() {
 
 // Simplified function to handle post creation
 export function setupPostForm() {
-    console.log("Setting up post form...");
-
     // Get the elements
     const titleInput = document.getElementById("post-title");
     const categorySelect = document.getElementById("post-category");
     const textarea = document.querySelector(".create-post textarea");
     const postButton = document.querySelector(".create-post button");
-
-    // Check if elements are found
-    console.log("Title input found:", !!titleInput);
-    console.log("Category select found:", !!categorySelect);
-    console.log("Textarea found:", !!textarea);
-    console.log("Button found:", !!postButton);
 
     if (!textarea || !postButton || !titleInput) {
         console.error("Form elements not found!");

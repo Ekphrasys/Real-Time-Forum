@@ -26,7 +26,6 @@ export function updateUsersList(users, onlineOnly = true) {
         if (user.user_id !== currentUserId) {
             item.style.cursor = 'pointer';
             item.addEventListener('click', () => {
-                console.log("Opening chat with:", user.user_id, user.username);
                 openChat(user.user_id, user.username);
             });
         } else {
@@ -74,11 +73,6 @@ export function displayMessage(msg) {
     const chatDiv = document.getElementById("chat-messages");
     if (!chatDiv) return;
 
-    // DEBUGING
-    console.log("Message sender ID:", msg.sender_id);
-    console.log("Current user ID:", currentUser?.user_id);
-
-
     // Check if the message is sent or received
     const isSentByMe = msg.sender_id === currentUser.user_id;
 
@@ -104,10 +98,6 @@ export function displayMessage(msg) {
       `;
     chatDiv.appendChild(messageElement);
     chatDiv.scrollTop = chatDiv.scrollHeight;
-
-     console.log("Message sender:", msg.sender_id);
-console.log("Current user:", currentUser?.user_id);
-console.log("Is sent by me:", msg.sender_id === currentUser?.user_id);
 }
 
 // Function to load message history
@@ -120,8 +110,6 @@ export async function loadMessageHistory(userId) {
                 '<div class="error-message">Invalid user ID</div>';
             return;
         }
-
-        console.log("Loading message history for user ID:", userId);
         
         const response = await fetch(`/messages?user_id=${userId}`, {
             credentials: 'include' // Important for cookies
@@ -144,7 +132,6 @@ export async function loadMessageHistory(userId) {
 
         // Check if `data` is an array before using `forEach`
         if (Array.isArray(data) && data.length > 0) {
-            console.log(`Displaying ${data.length} messages for user ${userId}`);
             
             data.forEach(msg => {
                 displayMessage({
@@ -179,8 +166,6 @@ export function openChat(userId, username) {
         return;
     }
     
-    console.log("Opening chat with:", userId, username);
-    
     // Always ensure the ID is a string
     const id = String(userId);
     
@@ -212,8 +197,6 @@ export function closeChat() {
 
 // Chat initialization
 export function initChat() {
-    console.log("Initializing chat system...");
-
     // Improved click handling
     document.addEventListener('click', function (e) {
         const userItem = e.target.closest('.user-item');
@@ -228,8 +211,6 @@ export function initChat() {
             console.dir(userItem);
             return;
         }
-
-        console.log(`Opening chat with ${username} (${userId})`);
         openChat(userId, username);
     });
 
@@ -265,14 +246,6 @@ export function initChat() {
     if (closeBtn) {
         closeBtn.addEventListener('click', closeChat);
     }
-
-    // Final check
-    console.log("Chat system initialized with:", {
-        modal: chatModal,
-        sendBtn: sendBtn,
-        input: messageInput,
-        closeBtn: closeBtn
-    });
 }
 
 // Handle user status change
