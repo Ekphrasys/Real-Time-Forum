@@ -86,9 +86,6 @@ export function attachLoginEventListener() {
       // Sets the current user
       window.currentUser = userData;
 
-      console.log("Login successful:", userData);
-      console.log("Current user:", window.currentUser.username);
-
       // Update navigation based on login status
       updateNavigation(true);
 
@@ -102,7 +99,6 @@ export function attachLoginEventListener() {
 }
 
 export function logout() {
-  console.log("Logout clicked");
   fetch("/logout", { method: "POST", credentials: "include" })
     .then((response) => response.json())
     .then(() => {

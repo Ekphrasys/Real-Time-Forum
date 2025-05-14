@@ -1,4 +1,5 @@
-window.currentUser = null;
+export let currentUser = null;
+
 export const routes = {
   register: function () {
     return `
@@ -189,29 +190,21 @@ export function loadAllUsers() {
       credentials: 'include'
   })
   .then(response => {
-      console.log("Response status:", response.status);
       if (!response.ok) {
           throw new Error(`HTTP error! Status: ${response.status}`);
       }
       return response.json();
   })
   .then(users => {
-      console.log("Received users data:", users);
-      if (users && users.length > 0) {
-          // Ensure all users have an is_online property
-          const usersWithStatus = users.map(user => ({
-              ...user,
-              is_online: user.is_online || false // Default to false if not defined
-          }));
-          updateUsersList(usersWithStatus, false);
-      } else {
-          console.log("No users found");
-          document.querySelector('.users-list').innerHTML = '<li>No users found</li>';
-      }
+      // Ajoutez is_online si manquant
+      const usersWithStatus = users.map(user => ({
+          ...user,
+          is_online: user.is_online || false
+      }));
+      updateUsersList(usersWithStatus, false);
   })
   .catch(error => {
       console.error('Error fetching all users:', error);
-      document.querySelector('.users-list').innerHTML = `<li>Error loading users: ${error.message}</li>`;
   });
 }
 

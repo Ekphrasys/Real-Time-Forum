@@ -1,3 +1,5 @@
+import { currentUser } from "./main.js";
+
 export let currentChatPartner = null;
 let showingOnlineUsers = true;
 
@@ -14,19 +16,18 @@ export function updateUsersList(users, onlineOnly = true) {
 
     usersToDisplay.forEach(user => {
         const item = document.createElement("li");
-        // Keep the online/offline class for visual styling
         item.className = `user-item ${user.is_online ? 'online' : 'offline'}`;
         
-        // Always store the ID and username
-        item.dataset.userId = user.id;
+        // Toujours stocker l'ID et le username, même pour les utilisateurs hors ligne
+        item.dataset.userId = user.user_id;
         item.dataset.username = user.username;
 
-        // Make all users clickable except the current user
-        if (user.id !== currentUserId) {
+        // Rendre tous les utilisateurs cliquables sauf l'utilisateur courant
+        if (user.user_id !== currentUserId) {
             item.style.cursor = 'pointer';
             item.addEventListener('click', () => {
-                console.log("Opening chat with:", user.id, user.username);
-                openChat(user.id, user.username);
+                console.log("Opening chat with:", user.user_id, user.username);
+                openChat(user.user_id, user.username);
             });
         } else {
             item.classList.add('current-user');
@@ -45,7 +46,7 @@ export function updateUsersList(users, onlineOnly = true) {
 }
 
 export function sendMessage() {
-    if (!currentChatPartner) return;
+    if (!currentChatPartner || !currentUser?.user_id) return;
 
     const input = document.getElementById("message-input");
     const content = input.value.trim();
@@ -57,9 +58,9 @@ export function sendMessage() {
             content: content
         }));
 
-        // Display the message immediately
+        // Utilisez user_id partout pour la cohérence
         displayMessage({
-            sender_id: currentUser.id,
+            sender_id: currentUser.user_id,
             content: content,
             timestamp: Date.now()
         });
@@ -73,12 +74,13 @@ export function displayMessage(msg) {
     const chatDiv = document.getElementById("chat-messages");
     if (!chatDiv) return;
 
-    // Add logs for debugging
-    console.log("Displaying message:", msg);
-    console.log("Current chat partner:", currentChatPartner);
-    
+    // DEBUGING
+    console.log("Message sender ID:", msg.sender_id);
+    console.log("Current user ID:", currentUser?.user_id);
+
+
     // Check if the message is sent or received
-    const isSentByMe = msg.sender_id === currentUser.id;
+    const isSentByMe = msg.sender_id === currentUser.user_id;
 
     const messageElement = document.createElement("div");
     messageElement.className = isSentByMe ? "message sent" : "message received";
@@ -102,6 +104,10 @@ export function displayMessage(msg) {
       `;
     chatDiv.appendChild(messageElement);
     chatDiv.scrollTop = chatDiv.scrollHeight;
+
+     console.log("Message sender:", msg.sender_id);
+console.log("Current user:", currentUser?.user_id);
+console.log("Is sent by me:", msg.sender_id === currentUser?.user_id);
 }
 
 // Function to load message history
