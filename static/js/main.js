@@ -44,8 +44,7 @@ export const routes = {
       <header>
           <h1>Holy Chicken Order</h1>
             <div class="user-info">
-          <p id="welcome">Welcome, ${window.currentUser ? currentUser.username : "Guest"
-      }</p>
+          <p id="welcome">Welcome, ${currentUser ? currentUser.username : "Guest"}</p>
               <button id="logout-button" onclick="console.log('Button clicked'); logout();">Logout</button>
             </div>
       </header>
@@ -155,7 +154,16 @@ export function navigateTo(page) {
     loadPosts();
     initChat();
     setupUserListToggle();
-    fetchOnlineUsers();
+
+     fetch('/online-users')
+    .then(response => response.json())
+    .then(users => {
+      console.log("Fetched online users:", users);
+      updateUsersList(users, true);
+    })
+    .catch(error => {
+      console.error("Error fetching online users:", error);
+    });
   }
 }
 
@@ -279,6 +287,8 @@ import {
 function checkSession() {
   fetch("/check-session", { method: "GET", credentials: "include" })
     .then((response) => {
+          console.log("Session check response status:", response.status);
+    console.log("Session check headers:", response.headers);
       console.log("Session check response:", response);
       if (response.ok) {
         return response.json(); // Get user data from response
@@ -292,12 +302,11 @@ function checkSession() {
     .then((userData) => {
       console.log("User data:", userData);
       currentUser = userData; // Store user data
+      window.currentUser = userData;
       console.log("currentUser after setting:", currentUser); // Debug to verify
-      updateNavigation(true);
-      navigateTo("home");
-
-      // Initialize WebSocket after successful login
       initializeWebSocket();
+      updateNavigation(true);
+      navigateTo("home");     
     })
     .catch((error) => {
       console.error("Session check error:", error);
@@ -326,22 +335,24 @@ window.viewPost = viewPost;
 
 function initializeWebSocket() {
   if (window.websocket) {
-    return; // Already connected
+    return;
   }
 
   const socket = new WebSocket("ws://" + window.location.host + "/ws");
 
   socket.onopen = function () {
     console.log("WebSocket connection established");
+     window.websocket = socket;
   };
 
   socket.onmessage = function (event) {
     const message = JSON.parse(event.data);
-    console.log("WebSocket message received:", message);
+     console.log("WS message type:", message.type, "content:", message);
 
     switch (message.type) {
         case "online_users":
-            updateUsersList(message.users);
+          console.log("Online users received:", message.users);
+            updateUsersList(message.users, true); // Force onlineOnly=true
             break;
         case "user_status":
             handleUserStatusChange(message);
@@ -349,7 +360,7 @@ function initializeWebSocket() {
         case "private_message":
             // Check if the message is intended for the current user
             // OR if it comes from the current chat partner
-            if (message.receiver_id === currentUser?.id || 
+            if (message.receiver_id === currentUser?.user_id || 
                 (currentChatPartner && message.sender_id === currentChatPartner.id)) {
                 
                 // Check if we are in the correct conversation to display the message

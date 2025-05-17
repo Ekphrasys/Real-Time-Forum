@@ -4,26 +4,38 @@ export let currentChatPartner = null;
 let showingOnlineUsers = true;
 
 export function updateUsersList(users, onlineOnly = true) {
+    console.log("Current user ID:", currentUser?.user_id, "Type:", typeof currentUser?.user_id, 
+            "First user ID:", users[0]?.user_id, "Type:", typeof users[0]?.user_id);
+
+
     const usersList = document.querySelector(".users-list");
     if (!usersList) return;
 
     usersList.innerHTML = '';
 
-    const currentUserId = currentUser?.id;
+    const currentUserId = currentUser?.user_id;
 
-    // Filter if necessary to display only online users
-    const usersToDisplay = onlineOnly ? users.filter(user => user.is_online) : users;
+ // Vérifiez que users est bien un tableau
+    if (!Array.isArray(users)) {
+        console.error("Users data is not an array:", users);
+        return;
+    }
+
+    // Filtrage cohérent
+    const usersToDisplay = onlineOnly 
+        ? users.filter(user => user.is_online) 
+        : users;
 
     usersToDisplay.forEach(user => {
         const item = document.createElement("li");
         item.className = `user-item ${user.is_online ? 'online' : 'offline'}`;
         
         // Toujours stocker l'ID et le username, même pour les utilisateurs hors ligne
-        item.dataset.userId = user.user_id;
+        item.dataset.userId = String(user.user_id)
         item.dataset.username = user.username;
 
         // Rendre tous les utilisateurs cliquables sauf l'utilisateur courant
-        if (user.user_id !== currentUserId) {
+        if (String(user.user_id) !== String(currentUserId)) {
             item.style.cursor = 'pointer';
             item.addEventListener('click', () => {
                 openChat(user.user_id, user.username);
@@ -74,7 +86,7 @@ export function displayMessage(msg) {
     if (!chatDiv) return;
 
     // Check if the message is sent or received
-    const isSentByMe = msg.sender_id === currentUser.user_id;
+    const isSentByMe = String(msg.sender_id) === String(currentUser?.user_id);
 
     const messageElement = document.createElement("div");
     messageElement.className = isSentByMe ? "message sent" : "message received";
@@ -259,7 +271,7 @@ export function handleUserStatusChange(message) {
     let userFound = false;
 
     userItems.forEach(item => {
-        if (item.dataset.userId === message.user_id) {
+        if (String(item.dataset.userId) === String(message.user_id)) {
             userFound = true;
             if (message.status === "online") {
                 item.classList.add("online");

@@ -13,6 +13,7 @@ func SetupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/check-session", CheckSessionHandler)
 	mux.HandleFunc("/messages", MessagesHandler)
 	mux.HandleFunc("/users", AllUsersHandler)
+	mux.HandleFunc("/online-users", OnlineUsersHandler)
 	// hub := shared.NewHub()
 
 	mux.HandleFunc("/posts", PostsHandler)

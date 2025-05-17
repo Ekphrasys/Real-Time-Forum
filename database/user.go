@@ -192,3 +192,45 @@ func GetAllUsers() ([]models.User, error) {
 
 	return users, nil
 }
+
+// user.go
+func GetOnlineUsers() ([]models.User, error) {
+	var onlineUsers []models.User
+
+	// Requête pour récupérer les utilisateurs avec des sessions actives
+	rows, err := DB.Query(`
+        SELECT u.user_id, u.username, u.email, u.first_name, u.last_name, u.age, u.gender, u.creation_date
+        FROM user u
+        INNER JOIN session s ON u.user_id = s.user_id
+        WHERE s.expires_at > CURRENT_TIMESTAMP
+        ORDER BY u.username ASC`)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query online users: %w", err)
+	}
+	defer rows.Close()
+
+	// Parcourir les résultats
+	for rows.Next() {
+		var user models.User
+		err := rows.Scan(
+			&user.Id,
+			&user.Username,
+			&user.Email,
+			&user.FirstName,
+			&user.LastName,
+			&user.Age,
+			&user.Gender,
+			&user.CreationDate,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan user row: %w", err)
+		}
+		onlineUsers = append(onlineUsers, user)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error after iterating rows: %w", err)
+	}
+
+	return onlineUsers, nil
+}
