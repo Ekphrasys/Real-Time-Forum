@@ -1,4 +1,9 @@
-export let currentUser = null;
+let _currentUser = null;
+export const getCurrentUser = () => _currentUser;
+export const setCurrentUser = (user) => {
+  console.log("Setting current user to:", user);
+  _currentUser = user;
+};
 
 export const routes = {
   register: function () {
@@ -44,7 +49,7 @@ export const routes = {
       <header>
           <h1>Holy Chicken Order</h1>
             <div class="user-info">
-          <p id="welcome">Welcome, ${currentUser ? currentUser.username : "Guest"}</p>
+          <p id="welcome">Welcome, ${getCurrentUser() ? getCurrentUser().username : "Guest"}</p>
               <button id="logout-button" onclick="console.log('Button clicked'); logout();">Logout</button>
             </div>
       </header>
@@ -99,8 +104,7 @@ export const routes = {
       <header>
         <h1>Holy Chicken Order</h1>
         <div class="user-info">
-          <p id="welcome">Welcome, ${window.currentUser ? window.currentUser.username : "Guest"
-      }</p>
+          <p id="welcome">Welcome, ${getCurrentUser() ? getCurrentUser().username : "Guest"}</p>
           <button onclick="navigateTo('home')">Back to Forum</button>
           <button id="logout-button" onclick="console.log('Button clicked'); logout();">Logout</button>
         </div>
@@ -135,123 +139,107 @@ window.onload = function () {
 // Function to navigate between pages
 export function navigateTo(page) {
   if (routes[page]) {
-    // Check if the route is a function and call it
-    const content =
-      typeof routes[page] === "function" ? routes[page]() : routes[page];
+    const content = typeof routes[page] === "function" ? routes[page]() : routes[page];
     document.getElementById("app").innerHTML = content;
     history.pushState({}, page, `#${page}`);
   }
-  // Attach event listener for register form after inserting into DOM
+
   if (page === "register") {
     attachRegisterEventListener();
-  }
-
-  if (page === "login") {
+  } else if (page === "login") {
     attachLoginEventListener();
-  }
-  if (page === "home") {
+  } else if (page === "home") {
+    console.log("Current user at home navigation:", getCurrentUser);
     setupPostForm();
     loadPosts();
     initChat();
     setupUserListToggle();
-
-     fetch('/online-users')
-    .then(response => response.json())
-    .then(users => {
-      console.log("Fetched online users:", users);
-      updateUsersList(users, true);
-    })
-    .catch(error => {
-      console.error("Error fetching online users:", error);
-    });
   }
 }
 
 function setupUserListToggle() {
-  document.getElementById('show-online-users')?.addEventListener('click', function() {
-      this.classList.add('active');
-      document.getElementById('show-all-users').classList.remove('active');
+  const showOnlineUsersBtn = document.getElementById('show-online-users');
+  const showAllUsersBtn = document.getElementById('show-all-users');
+
+  showOnlineUsersBtn?.addEventListener('click', function() {
+    showOnlineUsersBtn.classList.add('active');
+    showAllUsersBtn.classList.remove('active');
+    
+    // Utiliser d'abord le cache
+    const cachedUsers = getCachedOnlineUsers();
+    console.log("Cached online users:", cachedUsers);
+    
+    if (cachedUsers && cachedUsers.length > 0) {
+      console.log("Using cached online users");
+      updateUsersList(cachedUsers, true);
+    }
+
+    // Puis demander une mise à jour via WebSocket
+    if (window.websocket) {
+      console.log("Requesting fresh online users via WebSocket");
+      window.websocket.send(JSON.stringify({
+        type: "get_online_users"
+      }));
+    } else {
+      console.log("WebSocket not available, falling back to HTTP");
       loadOnlineUsers();
+    }
   });
 
-  document.getElementById('show-all-users')?.addEventListener('click', function() {
-      this.classList.add('active');
-      document.getElementById('show-online-users').classList.remove('active');
-      loadAllUsers();
+  showAllUsersBtn?.addEventListener('click', function() {
+    showAllUsersBtn.classList.add('active');
+    showOnlineUsersBtn.classList.remove('active');
+    loadAllUsers();
   });
 }
 
 function loadOnlineUsers() {
+  console.log("Loading online users via HTTP...");
   fetch('/online-users')
-      .then(response => response.json())
-      .then(users => {
-          updateUsersList(users, true);
-      });
+    .then(response => {
+      console.log("Online users response status:", response.status);
+      return response.json();
+    })
+    .then(users => {
+      console.log("Online users received from HTTP endpoint:", users);
+      const uniqueUsers = removeDuplicateUsers(users);
+      console.log("Online users after deduplication:", uniqueUsers);
+      updateUsersList(uniqueUsers.map(user => ({
+        ...user,
+        is_online: true
+      })), true);
+    })
+    .catch(error => {
+      console.error("Error loading online users:", error);
+    });
 }
 
 export function loadAllUsers() {
+  console.log("Loading all users...");
   fetch('/users', {
-      method: 'GET',
-      headers: {
-          'Accept': 'application/json',
-      },
-      credentials: 'include'
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+    },
+    credentials: 'include'
   })
-  .then(response => {
+    .then(response => {
       if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
+        throw new Error(`HTTP error! Status: ${response.status}`);
       }
       return response.json();
-  })
-  .then(users => {
-      // Ajoutez is_online si manquant
+    })
+    .then(users => {
+      console.log("All users received:", users);
       const usersWithStatus = users.map(user => ({
-          ...user,
-          is_online: user.is_online || false
+        ...user,
+        is_online: user.is_online || false
       }));
       updateUsersList(usersWithStatus, false);
-  })
-  .catch(error => {
+    })
+    .catch(error => {
       console.error('Error fetching all users:', error);
-  });
-}
-
-export function toggleUserList(showOnline) {
-  showingOnlineUsers = showOnline;
-  
-  if (showOnline) {
-      fetchOnlineUsers();
-  } else {
-      fetchAllUsers();
-  }
-}
-
-// Functions to fetch users
-function fetchOnlineUsers() {
-  if (window.websocket) {
-      window.websocket.send(JSON.stringify({
-          type: "get_online_users"
-      }));
-  }
-}
-
-function fetchAllUsers() {
-  console.log("Fetching all users...");
-  fetch('/users')
-      .then(response => {
-          console.log("Response status:", response.status);
-          if (!response.ok) {
-              throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-      })
-      .then(users => {
-          console.log("Received users data:", users);
-          updateUsersList(users, false);
-      })
-      .catch(error => {
-          console.error('Error fetching all users:', error);
-      });
+    });
 }
 
 window.navigateTo = navigateTo;
@@ -281,32 +269,37 @@ import {
   initChat,
   handleUserStatusChange,
   currentChatPartner,
+  getCachedOnlineUsers,
+  updateCachedOnlineUsers
 } from "./chat.js"
 
 // Verify if the session is still active
 function checkSession() {
   fetch("/check-session", { method: "GET", credentials: "include" })
     .then((response) => {
-          console.log("Session check response status:", response.status);
-    console.log("Session check headers:", response.headers);
-      console.log("Session check response:", response);
       if (response.ok) {
-        return response.json(); // Get user data from response
+        return response.json();
       } else {
-        console.log("Session is not active");
         updateNavigation(false);
         navigateTo("login");
         return Promise.reject("Not authenticated");
       }
     })
     .then((userData) => {
-      console.log("User data:", userData);
-      currentUser = userData; // Store user data
+      // Fermer l'ancien WebSocket s'il existe
+      if (window.websocket) {
+        window.websocket.close();
+        window.websocket = null;
+      }
+
+      setCurrentUser(userData);
       window.currentUser = userData;
-      console.log("currentUser after setting:", currentUser); // Debug to verify
-      initializeWebSocket();
       updateNavigation(true);
-      navigateTo("home");     
+
+      // Initialiser le WebSocket et attendre qu'il soit prêt
+      return initializeWebSocket().then(() => {
+        navigateTo("home");
+      });
     })
     .catch((error) => {
       console.error("Session check error:", error);
@@ -333,62 +326,140 @@ window.navigateTo = navigateTo;
 // Make sure to expose viewPost globally
 window.viewPost = viewPost;
 
-function initializeWebSocket() {
+export function initializeWebSocket() {
   if (window.websocket) {
-    return;
+    window.websocket.close();
+    window.websocket = null;
   }
 
-  const socket = new WebSocket("ws://" + window.location.host + "/ws");
+  return new Promise((resolve, reject) => {
+    const socket = new WebSocket("ws://" + window.location.host + "/ws");
 
-  socket.onopen = function () {
-    console.log("WebSocket connection established");
-     window.websocket = socket;
-  };
+    socket.onopen = function () {
+      console.log("WebSocket connection established");
+      window.websocket = socket;
 
-  socket.onmessage = function (event) {
-    const message = JSON.parse(event.data);
-     console.log("WS message type:", message.type, "content:", message);
+      if (getCurrentUser()?.user_id) {
+        // D'abord s'identifier
+        socket.send(JSON.stringify({
+          type: "identify",
+          user_id: getCurrentUser().user_id
+        }));
 
-    switch (message.type) {
+        // Ensuite envoyer la notification de connexion
+        socket.send(JSON.stringify({
+          type: "user_connected",
+          user_id: getCurrentUser().user_id,
+          username: getCurrentUser().username
+        }));
+
+        // Enfin, demander la liste des utilisateurs en ligne
+        socket.send(JSON.stringify({
+          type: "get_online_users"
+        }));
+      }
+      resolve(socket);
+    };
+
+    socket.onerror = function(error) {
+      console.error("WebSocket error:", error);
+      reject(error);
+    };
+
+    socket.onmessage = function (event) {
+      const message = JSON.parse(event.data);
+      console.log("WS message received:", {
+        type: message.type,
+        rawData: event.data,
+        parsedMessage: message
+      });
+
+      switch (message.type) {
         case "online_users":
-          console.log("Online users received:", message.users);
-            updateUsersList(message.users, true); // Force onlineOnly=true
-            break;
+          console.log("Online users received (before dedup):", message.users);
+          // Supprimer les doublons avant d'afficher
+          const uniqueUsers = removeDuplicateUsers(message.users);
+          console.log("Online users after dedup:", uniqueUsers);
+          // S'assurer que tous les utilisateurs sont marqués comme en ligne
+          const onlineUsers = uniqueUsers.map(user => ({
+            ...user,
+            is_online: true
+          }));
+          // Mettre à jour la liste et le cache
+          updateUsersList(onlineUsers, true);
+          break;
         case "user_status":
-            handleUserStatusChange(message);
-            break;
+          console.log("User status change received:", message);
+          handleUserStatusChange(message);
+          // Si nous sommes en mode "online users", mettre à jour la liste
+          const showOnlineUsersBtn = document.getElementById('show-online-users');
+          if (showOnlineUsersBtn?.classList.contains('active')) {
+            socket.send(JSON.stringify({
+              type: "get_online_users"
+            }));
+          }
+          break;
         case "private_message":
-            // Check if the message is intended for the current user
-            // OR if it comes from the current chat partner
-            if (message.receiver_id === currentUser?.user_id || 
-                (currentChatPartner && message.sender_id === currentChatPartner.id)) {
-                
-                // Check if we are in the correct conversation to display the message
-                const isCorrectConversation = 
-                    currentChatPartner && 
-                    (message.sender_id === currentChatPartner.id || 
-                    message.receiver_id === currentChatPartner.id);
-                
-                if (isCorrectConversation) {
-                    displayMessage({
-                        sender_id: message.sender_id,
-                        content: message.content,
-                        timestamp: message.timestamp || Date.now()
-                    });
-                } else {
-                    // Notification for a new message
-                    console.log("New message from:", message.sender_id);
-                    // You could add a UI notification here
-                }
+          // Check if the message is intended for the current user
+          // OR if it comes from the current chat partner
+          if (message.receiver_id === getCurrentUser?.user_id ||
+            (currentChatPartner && message.sender_id === currentChatPartner.id)) {
+
+            // Check if we are in the correct conversation to display the message
+            const isCorrectConversation =
+              currentChatPartner &&
+              (message.sender_id === currentChatPartner.id ||
+                message.receiver_id === currentChatPartner.id);
+
+            if (isCorrectConversation) {
+              displayMessage({
+                sender_id: message.sender_id,
+                content: message.content,
+                timestamp: message.timestamp || Date.now()
+              });
+            } else {
+              // Notification for a new message
+              console.log("New message from:", message.sender_id);
+              // You could add a UI notification here
             }
-            break;
+          }
+          break;
+      }
+    };
+
+    socket.onclose = function () {
+      console.log("WebSocket connection closed");
+      window.websocket = null;
+    };
+
+    window.websocket = socket;
+  });
+}
+
+function removeDuplicateUsers(users) {
+    console.log("Removing duplicates from users:", users);
+    if (!Array.isArray(users)) {
+        console.error("removeDuplicateUsers: Expected array, got:", typeof users);
+        return [];
     }
-  };
 
-  socket.onclose = function () {
-    console.log("WebSocket connection closed");
-    window.websocket = null;
-  };
-
-  window.websocket = socket;
+    const unique = [];
+    const ids = new Set();
+    
+    users.forEach(user => {
+        if (!user || !user.user_id) {
+            console.error("Invalid user object:", user);
+            return;
+        }
+        
+        if (!ids.has(user.user_id)) {
+            ids.add(user.user_id);
+            unique.push(user);
+        } else {
+            console.log("Duplicate user found and skipped:", user);
+        }
+    });
+    
+    console.log("Users after deduplication:", unique);
+    return unique;
 }

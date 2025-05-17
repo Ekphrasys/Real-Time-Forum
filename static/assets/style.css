@@ -292,6 +292,11 @@ p {
   transition: all 0.2s;
 }
 
+.user-item.current-user {
+    background-color: #FFF9C4;
+    border-left: 3px solid #FF9800;
+}
+
 .user-item:hover {
   background-color: #FFF9C4;
 }

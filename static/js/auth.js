@@ -1,4 +1,5 @@
-import { navigateTo, updateNavigation } from "./main.js";
+import { navigateTo, updateNavigation, setCurrentUser } from "./main.js";
+import { initializeWebSocket } from "./main.js";
 
 // Function to attach the event to the form
 export function attachRegisterEventListener() {
@@ -75,7 +76,7 @@ export function attachLoginEventListener() {
           identifier: identifier,
           password: password,
         }),
-        credentials: "include", // Include cookies in the request
+        credentials: "include",
       });
 
       const userData = await response.json();
@@ -83,14 +84,26 @@ export function attachLoginEventListener() {
         throw new Error(userData.error || "Login failed");
       }
 
-      // Sets the current user
+      // Fermer l'ancien WebSocket s'il existe
+      if (window.websocket) {
+        window.websocket.close();
+        window.websocket = null;
+      }
+
+      // Mettre à jour currentUser via la fonction exportée
+      console.log("User data received:", userData);
+      // Mettre à jour aussi window.currentUser pour compatibilité
       window.currentUser = userData;
-
-      // Update navigation based on login status
-      updateNavigation(true);
-
-      // Redirect to home page after successful login
-      navigateTo("home");
+      // Utiliser la fonction dédiée pour mettre à jour currentUser
+      setCurrentUser(userData);
+      
+      console.log("User data updated, calling navigation");
+      // Attendre que les données soient bien mises à jour
+      setTimeout(() => {
+        updateNavigation(true);
+        initializeWebSocket();
+        navigateTo("home");
+      }, 50);
     } catch (error) {
       console.error("Login error:", error);
       errorMessage.textContent = error.message;
@@ -99,9 +112,19 @@ export function attachLoginEventListener() {
 }
 
 export function logout() {
+  // Fermer le WebSocket s'il existe
+  if (window.websocket) {
+    window.websocket.close();
+    window.websocket = null;
+  }
+
   fetch("/logout", { method: "POST", credentials: "include" })
     .then((response) => response.json())
     .then(() => {
+      // Mettre à jour les données utilisateur
+      window.currentUser = null;
+      setCurrentUser(null);
+      
       updateNavigation(false);
       navigateTo("login");
     })
