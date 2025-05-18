@@ -161,14 +161,14 @@ function setupUserListToggle() {
   const showOnlineUsersBtn = document.getElementById('show-online-users');
   const showAllUsersBtn = document.getElementById('show-all-users');
 
-  showOnlineUsersBtn?.addEventListener('click', function() {
+  showOnlineUsersBtn?.addEventListener('click', function () {
     showOnlineUsersBtn.classList.add('active');
     showAllUsersBtn.classList.remove('active');
-    
+
     // Utiliser d'abord le cache
     const cachedUsers = getCachedOnlineUsers();
     console.log("Cached online users:", cachedUsers);
-    
+
     if (cachedUsers && cachedUsers.length > 0) {
       console.log("Using cached online users");
       updateUsersList(cachedUsers, true);
@@ -176,70 +176,54 @@ function setupUserListToggle() {
 
     // Puis demander une mise à jour via WebSocket
     if (window.websocket) {
-      console.log("Requesting fresh online users via WebSocket");
-      window.websocket.send(JSON.stringify({
+    window.websocket.send(JSON.stringify({
         type: "get_online_users"
-      }));
-    } else {
-      console.log("WebSocket not available, falling back to HTTP");
-      loadOnlineUsers();
-    }
+    }));
+}
   });
 
-  showAllUsersBtn?.addEventListener('click', function() {
+  showAllUsersBtn?.addEventListener('click', function () {
     showAllUsersBtn.classList.add('active');
     showOnlineUsersBtn.classList.remove('active');
     loadAllUsers();
   });
 }
 
-function loadOnlineUsers() {
-  console.log("Loading online users via HTTP...");
-  fetch('/online-users')
-    .then(response => {
-      console.log("Online users response status:", response.status);
-      return response.json();
-    })
-    .then(users => {
-      console.log("Online users received from HTTP endpoint:", users);
-      const uniqueUsers = removeDuplicateUsers(users);
-      console.log("Online users after deduplication:", uniqueUsers);
-      updateUsersList(uniqueUsers.map(user => ({
-        ...user,
-        is_online: true
-      })), true);
-    })
-    .catch(error => {
-      console.error("Error loading online users:", error);
-    });
-}
+// function loadOnlineUsers() {
+//   console.log("Loading online users via HTTP...");
+//   fetch('/online-users')
+//     .then(response => {
+//       console.log("Online users response status:", response.status);
+//       return response.json();
+//     })
+//     .then(users => {
+//       console.log("Online users received from HTTP endpoint:", users);
+//       const uniqueUsers = removeDuplicateUsers(users);
+//       console.log("Online users after deduplication:", uniqueUsers);
+//       updateUsersList(uniqueUsers.map(user => ({
+//         ...user,
+//         is_online: true
+//       })), true);
+//     })
+//     .catch(error => {
+//       console.error("Error loading online users:", error);
+//     });
+// }
 
 export function loadAllUsers() {
-  console.log("Loading all users...");
-  fetch('/users', {
-    method: 'GET',
-    headers: {
-      'Accept': 'application/json',
-    },
-    credentials: 'include'
-  })
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-      return response.json();
+    fetch('/users', {
+        method: 'GET',
+        headers: {'Accept': 'application/json'},
+        credentials: 'include'
     })
+    .then(response => response.json())
     .then(users => {
-      console.log("All users received:", users);
-      const usersWithStatus = users.map(user => ({
-        ...user,
-        is_online: user.is_online || false
-      }));
-      updateUsersList(usersWithStatus, false);
+        updateUsersList(users.map(user => ({
+            ...user,
+            is_online: user.is_online || false
+        })), false);
     })
-    .catch(error => {
-      console.error('Error fetching all users:', error);
-    });
+    .catch(error => console.error('Error fetching users:', error));
 }
 
 window.navigateTo = navigateTo;
@@ -348,7 +332,7 @@ export function initializeWebSocket() {
 
         // Ensuite envoyer la notification de connexion
         socket.send(JSON.stringify({
-          type: "user_connected",
+          type: "user_status",
           user_id: getCurrentUser().user_id,
           username: getCurrentUser().username
         }));
@@ -361,33 +345,24 @@ export function initializeWebSocket() {
       resolve(socket);
     };
 
-    socket.onerror = function(error) {
+    socket.onerror = function (error) {
       console.error("WebSocket error:", error);
       reject(error);
     };
 
     socket.onmessage = function (event) {
-      const message = JSON.parse(event.data);
-      console.log("WS message received:", {
-        type: message.type,
-        rawData: event.data,
-        parsedMessage: message
-      });
+    const message = JSON.parse(event.data);
+    console.log("WS message received:", message);
 
       switch (message.type) {
         case "online_users":
-          console.log("Online users received (before dedup):", message.users);
-          // Supprimer les doublons avant d'afficher
-          const uniqueUsers = removeDuplicateUsers(message.users);
-          console.log("Online users after dedup:", uniqueUsers);
-          // S'assurer que tous les utilisateurs sont marqués comme en ligne
-          const onlineUsers = uniqueUsers.map(user => ({
-            ...user,
-            is_online: true
-          }));
-          // Mettre à jour la liste et le cache
-          updateUsersList(onlineUsers, true);
-          break;
+            console.log("Online users received:", message.users);
+            // Plus besoin de déduplication, on utilise directement les données
+            updateUsersList(message.users.map(user => ({
+                ...user,
+                is_online: true
+            })), true);
+            break;
         case "user_status":
           console.log("User status change received:", message);
           handleUserStatusChange(message);
@@ -434,32 +409,4 @@ export function initializeWebSocket() {
 
     window.websocket = socket;
   });
-}
-
-function removeDuplicateUsers(users) {
-    console.log("Removing duplicates from users:", users);
-    if (!Array.isArray(users)) {
-        console.error("removeDuplicateUsers: Expected array, got:", typeof users);
-        return [];
-    }
-
-    const unique = [];
-    const ids = new Set();
-    
-    users.forEach(user => {
-        if (!user || !user.user_id) {
-            console.error("Invalid user object:", user);
-            return;
-        }
-        
-        if (!ids.has(user.user_id)) {
-            ids.add(user.user_id);
-            unique.push(user);
-        } else {
-            console.log("Duplicate user found and skipped:", user);
-        }
-    });
-    
-    console.log("Users after deduplication:", unique);
-    return unique;
 }

@@ -15,6 +15,9 @@ import (
 const (
 	UserStatusUpdate = "user_status"
 	PrivateMessage   = "private_message"
+	Identify         = "identify"
+	GetOnlineUsers   = "get_online_users"
+	OnlineUsersList  = "online_users"
 )
 
 // Upgrader to handle WebSocket connections
@@ -67,7 +70,17 @@ func HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add to connections slice with mutex
+	// Avant d'ajouter une nouvelle connexion
 	connectionsLock.Lock()
+	// Supprime les connexions existantes pour cet utilisateur
+	filtered := connections[:0]
+	for _, c := range connections {
+		if c.UserID != userID {
+			filtered = append(filtered, c)
+		}
+	}
+	connections = filtered
+	// Ajoute la nouvelle connexion
 	connections = append(connections, activeConn)
 	connectionsLock.Unlock()
 
@@ -123,6 +136,15 @@ func HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 		switch msgType.Type {
 		case PrivateMessage:
 			handlePrivateMessage(conn, userID, message)
+		case Identify:
+			// Just log for now, no action needed
+			log.Printf("User identified: %s", userID)
+		case UserStatusUpdate:
+			// Broadcast the new connection status
+			broadcastUserStatus(userID, user.Username, "online")
+		case GetOnlineUsers:
+			// Send online users list to requester
+			sendOnlineUsersList(conn)
 		default:
 			log.Printf("Unknown message type: %s", msgType.Type)
 		}
@@ -149,7 +171,7 @@ func sendOnlineUsersList(conn *websocket.Conn) {
 
 	// Create a message with all online users
 	message := map[string]interface{}{
-		"type":  "online_users",
+		"type":  OnlineUsersList,
 		"users": onlineUsers,
 	}
 

@@ -199,11 +199,11 @@ func GetOnlineUsers() ([]models.User, error) {
 
 	// Requête pour récupérer les utilisateurs avec des sessions actives
 	rows, err := DB.Query(`
-        SELECT u.user_id, u.username, u.email, u.first_name, u.last_name, u.age, u.gender, u.creation_date
-        FROM user u
-        INNER JOIN session s ON u.user_id = s.user_id
-        WHERE s.expires_at > CURRENT_TIMESTAMP
-        ORDER BY u.username ASC`)
+    SELECT DISTINCT u.user_id, u.username, u.email, u.first_name, u.last_name, u.age, u.gender, u.creation_date
+    FROM user u
+    INNER JOIN session s ON u.user_id = s.user_id
+    WHERE s.expires_at > CURRENT_TIMESTAMP
+    ORDER BY u.username ASC`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query online users: %w", err)
 	}

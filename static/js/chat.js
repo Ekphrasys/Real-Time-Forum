@@ -3,6 +3,7 @@ import { setCurrentUser, getCurrentUser } from "./main.js";
 export let currentChatPartner = null;
 let showingOnlineUsers = true;
 let cachedOnlineUsers = [];
+let pendingStatusUpdates = {}; // Store pending updates
 
 export function setShowingOnlineUsers(value) {
     showingOnlineUsers = value;
@@ -18,85 +19,51 @@ export function updateCachedOnlineUsers(users) {
 }
 
 export function updateUsersList(users, onlineOnly = true) {
-    console.log("Updating users list - raw data:", users);
+    console.log("Updating users list:", users);
     showingOnlineUsers = onlineOnly;
 
     const usersList = document.querySelector(".users-list");
     if (!usersList) {
-        console.error("Users list container not found");
+        console.error("Users list element not found!");
         return;
     }
 
     usersList.innerHTML = '';
+    const currentUserId = getCurrentUser()?.user_id;
 
-    const currentUserId = getCurrentUser()?.user_id ? String(getCurrentUser().user_id) : null;
-
-    if (!Array.isArray(users)) {
-        console.error("Invalid users data format:", users);
+    if (!users || !users.length) {
+        usersList.innerHTML = `<div class="no-users">${onlineOnly ? "No users online" : "No users found"}</div>`;
         return;
     }
 
-    // Utiliser un Map pour dédupliquer efficacement
-    const uniqueUsersMap = new Map();
+    // Use users array directly without deduplication
     users.forEach(user => {
-        // Si l'utilisateur existe déjà, ne le remplacer que s'il est en ligne
-        const existingUser = uniqueUsersMap.get(user.user_id);
-        if (!existingUser || user.is_online) {
-            uniqueUsersMap.set(user.user_id, user);
-        }
-    });
-
-    // Convertir le Map en array
-    const uniqueUsers = Array.from(uniqueUsersMap.values());
-
-    // Si nous sommes en mode "online only", mettre à jour le cache
-    if (onlineOnly) {
-        updateCachedOnlineUsers(uniqueUsers.filter(user => user.is_online));
-    }
-
-    const usersToDisplay = onlineOnly 
-        ? getCachedOnlineUsers()
-        : uniqueUsers;
-
-    console.log("Users to display after filtering:", usersToDisplay);
-
-    if (usersToDisplay.length === 0) {
-        const noUsersMsg = document.createElement("div");
-        noUsersMsg.className = "no-users";
-        noUsersMsg.textContent = onlineOnly ? "No users online" : "No users found";
-        usersList.appendChild(noUsersMsg);
-        return;
-    }
-
-    usersToDisplay.forEach(user => {
-        const isCurrentUser = String(user.user_id) === currentUserId;
+        const isCurrentUser = user.user_id === currentUserId;
         const item = document.createElement("li");
         item.className = `user-item ${user.is_online ? 'online' : 'offline'} ${isCurrentUser ? 'current-user' : ''}`;
-        item.dataset.userId = String(user.user_id);
-        item.dataset.username = user.username;
+        item.dataset.userId = user.user_id; // Add user ID as data attribute
+        item.dataset.username = user.username; // Add username as data attribute
+        item.innerHTML = `
+            <div class="user-status ${user.is_online ? 'online' : 'offline'}"></div>
+            <div class="user-name">${user.username}${isCurrentUser ? ' (You)' : ''}</div>
+        `;
 
-        // Rendre tous les utilisateurs cliquables sauf soi-même
         if (!isCurrentUser) {
             item.style.cursor = 'pointer';
-            item.addEventListener('click', () => {
-                openChat(user.user_id, user.username);
-            });
+            item.addEventListener('click', () => openChat(user.user_id, user.username));
         }
 
-        const statusDiv = document.createElement("div");
-        statusDiv.className = `user-status ${user.is_online ? 'online' : 'offline'}`;
-        
-        const nameDiv = document.createElement("div");
-        nameDiv.className = "user-name";
-        nameDiv.textContent = user.username + (isCurrentUser ? " (You)" : "");
-
-        item.append(statusDiv, nameDiv);
         usersList.appendChild(item);
     });
+
+    // Update cache if onlineOnly mode
+    if (onlineOnly) {
+        updateCachedOnlineUsers(users.filter(user => user.is_online));
+    }
 }
 
 export function sendMessage() {
-    if (!currentChatPartner || !currentUser?.user_id) return;
+    if (!currentChatPartner || !getCurrentUser()?.user_id) return;
 
     const input = document.getElementById("message-input");
     const content = input.value.trim();
@@ -108,9 +75,9 @@ export function sendMessage() {
             content: content
         }));
 
-        // Utilisez user_id partout pour la cohérence
+        // Use user_id consistently
         displayMessage({
-            sender_id: currentUser.user_id,
+            sender_id: getCurrentUser().user_id,
             content: content,
             timestamp: Date.now()
         });
@@ -136,12 +103,12 @@ export function displayMessage(msg) {
     // Also add an attribute for the conversation
     if (currentChatPartner && currentChatPartner.id) {
         messageElement.dataset.conversationId = isSentByMe 
-            ? `${currentUser.id}-${currentChatPartner.id}` 
-            : `${msg.sender_id}-${currentUser.id}`;
+            ? `${getCurrentUser().user_id}-${currentChatPartner.id}` 
+            : `${msg.sender_id}-${getCurrentUser().user_id}`;
     }
 
     // Display name (optional)
-    const displayName = isSentByMe ? currentUser.username : currentChatPartner?.username || "Other user";
+    const displayName = isSentByMe ? getCurrentUser().username : currentChatPartner?.username || "Other user";
 
     messageElement.innerHTML = `
           <div class="message-content">${msg.content}</div>
@@ -157,8 +124,10 @@ export async function loadMessageHistory(userId) {
         // Check that the ID exists
         if (!userId) {
             console.error("User ID is undefined or null");
-            document.getElementById("chat-messages").innerHTML = 
-                '<div class="error-message">Invalid user ID</div>';
+            const chatDiv = document.getElementById("chat-messages");
+            if (chatDiv) {
+                chatDiv.innerHTML = '<div class="error-message">Invalid user ID</div>';
+            }
             return;
         }
         
@@ -183,7 +152,6 @@ export async function loadMessageHistory(userId) {
 
         // Check if `data` is an array before using `forEach`
         if (Array.isArray(data) && data.length > 0) {
-            
             data.forEach(msg => {
                 displayMessage({
                     sender_id: msg.sender_id,
@@ -202,13 +170,15 @@ export async function loadMessageHistory(userId) {
     } catch (error) {
         console.error("Error loading messages:", error);
         // Display the error to the user
-        const errorDiv = document.createElement("div");
-        errorDiv.className = "error-message";
-        errorDiv.textContent = "Unable to load messages. Please try again.";
-        document.getElementById("chat-messages").appendChild(errorDiv);
+        const chatDiv = document.getElementById("chat-messages");
+        if (chatDiv) {
+            const errorDiv = document.createElement("div");
+            errorDiv.className = "error-message";
+            errorDiv.textContent = "Unable to load messages. Please try again.";
+            chatDiv.appendChild(errorDiv);
+        }
     }
 }
-
 
 export function openChat(userId, username) {
     // Check that the ID and username are defined
@@ -241,7 +211,7 @@ export function openChat(userId, username) {
 export function closeChat() {
     const chatModal = document.getElementById("chat-modal");
     if (chatModal) {
-        chatModal.style.display = "none"; // Change here
+        chatModal.style.display = "none";
     }
     currentChatPartner = null;
 }
@@ -253,13 +223,11 @@ export function initChat() {
         const userItem = e.target.closest('.user-item');
         if (!userItem) return;
 
-        // Retrieve directly from dataset (more reliable)
         const userId = userItem.dataset.userId;
         const username = userItem.dataset.username;
 
         if (!userId || !username) {
             console.error("Failed to retrieve user data from:", userItem);
-            console.dir(userItem);
             return;
         }
         openChat(userId, username);
@@ -299,14 +267,34 @@ export function initChat() {
     }
 }
 
-// Handle user status change
+// Handle user status change with improved reliability
 export function handleUserStatusChange(message) {
     console.log("Handling user status change:", message);
-    const usersList = document.querySelector(".users-list");
-    if (!usersList) return;
+    
+    // Clear any pending updates for this user
+    if (pendingStatusUpdates[message.user_id]) {
+        clearTimeout(pendingStatusUpdates[message.user_id]);
+        delete pendingStatusUpdates[message.user_id];
+    }
+    
+    // Schedule the update with a short delay to ensure proper UI rendering
+    pendingStatusUpdates[message.user_id] = setTimeout(() => {
+        processUserStatusUpdate(message);
+        delete pendingStatusUpdates[message.user_id];
+    }, 100); // Short delay to ensure DOM operations complete
+}
 
-    // Mettre à jour le cache en fonction du statut
+// Process the actual user status update
+function processUserStatusUpdate(message) {
+    const usersList = document.querySelector(".users-list");
+    if (!usersList) {
+        console.error("Users list not found during status update!");
+        return;
+    }
+    
+    // Update the cached online users
     if (message.status === "online") {
+        // Add or update user in cache
         const newCachedUsers = [...cachedOnlineUsers];
         const existingIndex = newCachedUsers.findIndex(u => u.user_id === message.user_id);
         
@@ -321,76 +309,104 @@ export function handleUserStatusChange(message) {
         }
         updateCachedOnlineUsers(newCachedUsers);
     } else if (message.status === "offline") {
+        // Remove user from cache
         updateCachedOnlineUsers(cachedOnlineUsers.filter(u => u.user_id !== message.user_id));
     }
-
-    // Si c'est une nouvelle connexion
+    
+    // User is coming online
     if (message.status === "online") {
-        // Vérifier si l'utilisateur est déjà dans la liste
+        // Check if user is already in the list
         const existingUser = usersList.querySelector(`[data-user-id="${message.user_id}"]`);
         
         if (!existingUser) {
-            // Ajouter le nouvel utilisateur
-            const item = document.createElement("li");
-            item.className = "user-item online";
-            item.dataset.userId = message.user_id;
-            item.dataset.username = message.username;
-
-            const statusDiv = document.createElement("div");
-            statusDiv.className = "user-status online";
-            
-            const nameDiv = document.createElement("div");
-            nameDiv.className = "user-name";
-            nameDiv.textContent = message.username;
-
-            item.appendChild(statusDiv);
-            item.appendChild(nameDiv);
-            
-            // Rendre cliquable seulement si ce n'est pas l'utilisateur courant
-            if (String(message.user_id) !== String(getCurrentUser()?.user_id)) {
-                item.style.cursor = 'pointer';
-                item.addEventListener('click', () => {
-                    openChat(message.user_id, message.username);
-                });
-            } else {
-                item.classList.add('current-user');
-                nameDiv.textContent += " (You)";
-            }
-
-            usersList.appendChild(item);
-
-            // Supprimer le message "No users online" s'il existe
-            const noUsersMsg = usersList.querySelector(".no-users");
-            if (noUsersMsg) {
-                noUsersMsg.remove();
+            // Only add new users to list if we're showing online users
+            if (showingOnlineUsers) {
+                // Add the new user
+                const item = document.createElement("li");
+                item.className = "user-item online";
+                item.dataset.userId = message.user_id;
+                item.dataset.username = message.username;
+    
+                const statusDiv = document.createElement("div");
+                statusDiv.className = "user-status online";
+                
+                const nameDiv = document.createElement("div");
+                nameDiv.className = "user-name";
+                nameDiv.textContent = message.username;
+    
+                item.appendChild(statusDiv);
+                item.appendChild(nameDiv);
+                
+                // Make clickable only if not the current user
+                if (String(message.user_id) !== String(getCurrentUser()?.user_id)) {
+                    item.style.cursor = 'pointer';
+                    item.addEventListener('click', () => {
+                        openChat(message.user_id, message.username);
+                    });
+                } else {
+                    item.classList.add('current-user');
+                    nameDiv.textContent += " (You)";
+                }
+    
+                usersList.appendChild(item);
+    
+                // Remove "No users online" message if it exists
+                const noUsersMsg = usersList.querySelector(".no-users");
+                if (noUsersMsg) {
+                    noUsersMsg.remove();
+                }
             }
         } else {
-            // Mettre à jour le statut si l'utilisateur existe déjà
+            // Update status if user already exists
             existingUser.classList.remove("offline");
             existingUser.classList.add("online");
-            existingUser.querySelector('.user-status').className = 'user-status online';
-        }
-    } 
-    // Gestion des déconnexions
-    else if (message.status === "offline") {
-        const userItem = usersList.querySelector(`[data-user-id="${message.user_id}"]`);
-        if (userItem) {
-            if (showingOnlineUsers) {
-                userItem.remove();
-            } else {
-                userItem.classList.remove("online");
-                userItem.classList.add("offline");
-                userItem.querySelector('.user-status').className = 'user-status offline';
+            const statusElement = existingUser.querySelector('.user-status');
+            if (statusElement) {
+                statusElement.className = 'user-status online';
             }
         }
-
-        // Vérifier s'il reste des utilisateurs en ligne
-        const onlineUsers = usersList.querySelectorAll(".user-item.online");
-        if (onlineUsers.length === 0) {
-            const noUsersMsg = document.createElement("div");
-            noUsersMsg.className = "no-users";
-            noUsersMsg.textContent = showingOnlineUsers ? "No users online" : "No users found";
-            usersList.appendChild(noUsersMsg);
+    } 
+    // User is going offline
+    else if (message.status === "offline") {
+        const userItem = usersList.querySelector(`[data-user-id="${message.user_id}"]`);
+        
+        if (userItem) {
+            if (showingOnlineUsers) {
+                // In online-only view, remove offline users with animation
+                userItem.style.transition = "opacity 0.5s";
+                userItem.style.opacity = "0";
+                
+                // Remove element after animation completes
+                setTimeout(() => {
+                    userItem.remove();
+                    
+                    // Check if there are any remaining online users
+                    const remainingUsers = usersList.querySelectorAll(".user-item");
+                    if (remainingUsers.length === 0) {
+                        const noUsersMsg = document.createElement("div");
+                        noUsersMsg.className = "no-users";
+                        noUsersMsg.textContent = "No users online";
+                        usersList.appendChild(noUsersMsg);
+                    }
+                }, 500);
+            } else {
+                // In all-users view, just update status
+                userItem.classList.remove("online");
+                userItem.classList.add("offline");
+                const statusElement = userItem.querySelector('.user-status');
+                if (statusElement) {
+                    statusElement.className = 'user-status offline';
+                }
+            }
         }
+    }
+    
+    // Request fresh list of online users to ensure we're in sync
+    if (window.websocket && showingOnlineUsers) {
+        setTimeout(() => {
+            window.websocket.send(JSON.stringify({
+                type: "get_online_users"
+            }));
+        }, 300); // Delay to allow server to process the status change
     }
 }
