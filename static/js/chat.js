@@ -5,6 +5,11 @@ let showingOnlineUsers = true;
 let cachedOnlineUsers = [];
 let pendingStatusUpdates = {}; // Store pending updates
 
+let currentPage = 1;
+let isLoadingMessages = false;
+let hasMoreMessages = true;
+let lastMessageTimestamp = null; // Pour garder une trace du dernier message chargé
+
 export function setShowingOnlineUsers(value) {
     showingOnlineUsers = value;
 }
@@ -14,12 +19,10 @@ export function getCachedOnlineUsers() {
 }
 
 export function updateCachedOnlineUsers(users) {
-    console.log("Updating cached online users:", users);
     cachedOnlineUsers = users;
 }
 
 export function updateUsersList(users, onlineOnly = true) {
-    console.log("Updating users list:", users);
     showingOnlineUsers = onlineOnly;
 
     const usersList = document.querySelector(".users-list");
@@ -119,65 +122,159 @@ export function displayMessage(msg) {
 }
 
 // Function to load message history
-export async function loadMessageHistory(userId) {
-    try {
-        // Check that the ID exists
-        if (!userId) {
-            console.error("User ID is undefined or null");
-            const chatDiv = document.getElementById("chat-messages");
-            if (chatDiv) {
-                chatDiv.innerHTML = '<div class="error-message">Invalid user ID</div>';
-            }
-            return;
+export async function loadMessageHistory(userId, loadMore = false) {
+    // Avoid duplicate requests
+    if (isLoadingMessages) {
+        console.log("A loading request is already in progress...");
+        return;
+    }
+    
+    // If starting a new conversation (not loading more messages)
+    if (!loadMore) {
+        currentPage = 1;
+        hasMoreMessages = true;
+        const chatDiv = document.getElementById("chat-messages");
+        if (chatDiv) {
+            chatDiv.innerHTML = '<div class="loading-indicator">Loading messages...</div>';
         }
+    } 
+    // If requesting more messages but there are none left
+    else if (!hasMoreMessages) {
+        console.log("No additional messages to load.");
+        return;
+    }
+
+    console.log(`Loading messages: page ${currentPage}, loadMore=${loadMore}`);
+    isLoadingMessages = true;
+    
+    try {
+        // Use a standard page size for consistent pagination
+        const pageSize = 10;
         
-        const response = await fetch(`/messages?user_id=${userId}`, {
-            credentials: 'include' // Important for cookies
+        // Add pagination parameters
+        const response = await fetch(`/messages?user_id=${userId}&page=${currentPage}&limit=${pageSize}`, {
+            credentials: 'include'
         });
 
         if (!response.ok) {
-            throw new Error("Failed to load messages");
+            throw new Error(`Failed to load messages: ${response.status} ${response.statusText}`);
         }
 
         const data = await response.json();
+        console.log(`Received ${data.length} messages from API`);
+        
         const chatDiv = document.getElementById("chat-messages");
-
         if (!chatDiv) {
             console.error("Message container not found");
             return;
         }
 
-        // Clear the container before adding new messages
-        chatDiv.innerHTML = "";
+        // Remove loading indicator if present
+        const loadingIndicator = chatDiv.querySelector('.loading-indicator');
+        if (loadingIndicator) {
+            loadingIndicator.remove();
+        }
 
-        // Check if `data` is an array before using `forEach`
+        // Clear only if it's the first load
+        if (!loadMore) {
+            chatDiv.innerHTML = "";
+        }
+
         if (Array.isArray(data) && data.length > 0) {
-            data.forEach(msg => {
-                displayMessage({
-                    sender_id: msg.sender_id,
-                    content: msg.content,
-                    timestamp: new Date(msg.sent_at).getTime()
-                });
+            // Store current scroll position and height
+            const scrollPosition = chatDiv.scrollTop;
+            const oldScrollHeight = chatDiv.scrollHeight;
+
+            // Add new messages at the top in the correct order (newest at bottom)
+            const fragment = document.createDocumentFragment();
+            
+            // Reverse the list to display oldest at top
+            data.reverse().forEach(msg => {
+                const messageElement = createMessageElement(msg);
+                fragment.appendChild(messageElement); // Insert at end for proper order
             });
+
+            // Insert at the beginning for loading more messages
+            if (loadMore) {
+                chatDiv.insertBefore(fragment, chatDiv.firstChild);
+            } else {
+                chatDiv.appendChild(fragment);
+            }
+
+            // Adjust scroll position after adding new content
+            if (loadMore) {
+                // When loading older messages (scrolling up), maintain the same view
+                const newScrollHeight = chatDiv.scrollHeight;
+                chatDiv.scrollTop = newScrollHeight - oldScrollHeight + scrollPosition;
+            } else {
+                // When loading first page, scroll to bottom
+                chatDiv.scrollTop = chatDiv.scrollHeight;
+            }
+
+            // KEY CHANGE: Check the content length against expected page size
+            // If we got exactly the page size we requested, there might be more
+            hasMoreMessages = data.length >= pageSize;
+            
+            // Only increment the page if we're going to request more
+            if (hasMoreMessages) {
+                currentPage++;
+            }
+            
+            console.log(`Update: page=${currentPage}, hasMoreMessages=${hasMoreMessages}, data.length=${data.length}, pageSize=${pageSize}`);
         } else {
-            console.warn("No messages found or invalid format");
-            // Display a message to the user
-            const noMessages = document.createElement("div");
-            noMessages.className = "no-messages";
-            noMessages.textContent = "No messages. Start the conversation!";
-            chatDiv.appendChild(noMessages);
+            if (!loadMore) {
+                chatDiv.innerHTML = '<div class="no-messages">No messages. Start the conversation!</div>';
+            }
+            hasMoreMessages = false;
         }
     } catch (error) {
         console.error("Error loading messages:", error);
-        // Display the error to the user
         const chatDiv = document.getElementById("chat-messages");
-        if (chatDiv) {
-            const errorDiv = document.createElement("div");
-            errorDiv.className = "error-message";
-            errorDiv.textContent = "Unable to load messages. Please try again.";
-            chatDiv.appendChild(errorDiv);
+        if (chatDiv && chatDiv.querySelector('.loading-indicator')) {
+            chatDiv.innerHTML = '<div class="error-message">Failed to load messages. Please try again.</div>';
         }
+    } finally {
+        isLoadingMessages = false;
     }
+}
+
+function isScrolledToBottom(element) {
+    return element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+}
+
+function isScrolledNearTop(element) {
+    return element.scrollTop < 100;
+}
+
+function createMessageElement(msg) {
+    const isSentByMe = String(msg.sender_id) === String(getCurrentUser()?.user_id);
+    const messageElement = document.createElement("div");
+    messageElement.className = isSentByMe ? "message sent" : "message received";
+    messageElement.dataset.senderId = msg.sender_id;
+    messageElement.dataset.messageId = msg.id; // Ajout d'un identifiant unique pour le message
+    
+    if (currentChatPartner && currentChatPartner.id) {
+        messageElement.dataset.conversationId = isSentByMe 
+            ? `${getCurrentUser().user_id}-${currentChatPartner.id}` 
+            : `${msg.sender_id}-${getCurrentUser().user_id}`;
+    }
+
+    // Format the timestamp
+    let timeString;
+    try {
+        // Timestamp could be a unix timestamp (number) or a date string
+        const timestamp = typeof msg.sent_at === 'string' ? msg.sent_at : (msg.timestamp || new Date());
+        timeString = new Date(timestamp).toLocaleTimeString();
+    } catch (e) {
+        console.error("Error formatting timestamp:", e);
+        timeString = "Unknown time";
+    }
+
+    messageElement.innerHTML = `
+        <div class="message-content">${msg.content}</div>
+        <div class="message-time">${timeString}</div>
+    `;
+    return messageElement;
 }
 
 export function openChat(userId, username) {
@@ -189,6 +286,11 @@ export function openChat(userId, username) {
     
     // Always ensure the ID is a string
     const id = String(userId);
+    
+    // Reset pagination state
+    currentPage = 1;
+    hasMoreMessages = true;
+    isLoadingMessages = false;
     
     // Set the current chat partner
     currentChatPartner = { id: id, username: username };
@@ -202,6 +304,12 @@ export function openChat(userId, username) {
         
         // Load message history
         loadMessageHistory(id);
+        
+        // Focus sur le champ de saisie
+        setTimeout(() => {
+            const inputField = document.getElementById("message-input");
+            if (inputField) inputField.focus();
+        }, 300);
     } else {
         console.error("Chat modal elements not found!");
     }
@@ -214,10 +322,50 @@ export function closeChat() {
         chatModal.style.display = "none";
     }
     currentChatPartner = null;
+    
+    // Reset pagination state
+    currentPage = 1;
+    hasMoreMessages = true;
+    isLoadingMessages = false;
+}
+
+function throttle(func, limit) {
+    let lastFunc;
+    let lastRan;
+    return function() {
+        const context = this;
+        const args = arguments;
+        if (!lastRan) {
+            func.apply(context, args);
+            lastRan = Date.now();
+        } else {
+            clearTimeout(lastFunc);
+            lastFunc = setTimeout(function() {
+                if ((Date.now() - lastRan) >= limit) {
+                    func.apply(context, args);
+                    lastRan = Date.now();
+                }
+            }, limit - (Date.now() - lastRan));
+        }
+    }
+}
+
+// Fonction pour le chargement lors du défilement
+function handleScrollForLoading() {
+    const chatMessages = document.getElementById('chat-messages');
+    if (!chatMessages) return;
+    
+    // Si proche du haut, charger plus de messages
+    if (isScrolledNearTop(chatMessages) && !isLoadingMessages && hasMoreMessages && currentChatPartner) {
+        console.log("Défilement détecté près du haut - chargement de plus de messages");
+        loadMessageHistory(currentChatPartner.id, true);
+    }
 }
 
 // Chat initialization
 export function initChat() {
+    console.log("Initializing chat...");
+    
     // Improved click handling
     document.addEventListener('click', function (e) {
         const userItem = e.target.closest('.user-item');
@@ -264,6 +412,26 @@ export function initChat() {
     const closeBtn = document.querySelector('.close-chat');
     if (closeBtn) {
         closeBtn.addEventListener('click', closeChat);
+    }
+
+    // Configuration de l'événement de défilement pour le chargement
+    const chatMessages = document.getElementById('chat-messages');
+    if (chatMessages) {
+        console.log("Adding scroll event listener to chat messages container");
+        
+        // Nettoyer l'écouteur précédent si présent
+        chatMessages.removeEventListener('scroll', handleScrollForLoading);
+        
+        // Ajouter le nouvel écouteur avec throttle
+        const throttledScrollHandler = throttle(handleScrollForLoading, 300);
+        chatMessages.addEventListener('scroll', throttledScrollHandler); 
+        
+        // Log pour debug
+        chatMessages.addEventListener('scroll', () => {
+            console.log(`ScrollTop: ${chatMessages.scrollTop}, ScrollHeight: ${chatMessages.scrollHeight}, ClientHeight: ${chatMessages.clientHeight}`);
+        });
+    } else {
+        console.error("Chat messages container not found");
     }
 }
 

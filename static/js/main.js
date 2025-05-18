@@ -149,7 +149,6 @@ export function navigateTo(page) {
   } else if (page === "login") {
     attachLoginEventListener();
   } else if (page === "home") {
-    console.log("Current user at home navigation:", getCurrentUser);
     setupPostForm();
     loadPosts();
     initChat();
@@ -167,10 +166,8 @@ function setupUserListToggle() {
 
     // Utiliser d'abord le cache
     const cachedUsers = getCachedOnlineUsers();
-    console.log("Cached online users:", cachedUsers);
 
     if (cachedUsers && cachedUsers.length > 0) {
-      console.log("Using cached online users");
       updateUsersList(cachedUsers, true);
     }
 
@@ -188,27 +185,6 @@ function setupUserListToggle() {
     loadAllUsers();
   });
 }
-
-// function loadOnlineUsers() {
-//   console.log("Loading online users via HTTP...");
-//   fetch('/online-users')
-//     .then(response => {
-//       console.log("Online users response status:", response.status);
-//       return response.json();
-//     })
-//     .then(users => {
-//       console.log("Online users received from HTTP endpoint:", users);
-//       const uniqueUsers = removeDuplicateUsers(users);
-//       console.log("Online users after deduplication:", uniqueUsers);
-//       updateUsersList(uniqueUsers.map(user => ({
-//         ...user,
-//         is_online: true
-//       })), true);
-//     })
-//     .catch(error => {
-//       console.error("Error loading online users:", error);
-//     });
-// }
 
 export function loadAllUsers() {
     fetch('/users', {
@@ -352,11 +328,9 @@ export function initializeWebSocket() {
 
     socket.onmessage = function (event) {
     const message = JSON.parse(event.data);
-    console.log("WS message received:", message);
 
       switch (message.type) {
         case "online_users":
-            console.log("Online users received:", message.users);
             // Plus besoin de déduplication, on utilise directement les données
             updateUsersList(message.users.map(user => ({
                 ...user,
@@ -364,7 +338,6 @@ export function initializeWebSocket() {
             })), true);
             break;
         case "user_status":
-          console.log("User status change received:", message);
           handleUserStatusChange(message);
           // Si nous sommes en mode "online users", mettre à jour la liste
           const showOnlineUsersBtn = document.getElementById('show-online-users');
@@ -395,7 +368,6 @@ export function initializeWebSocket() {
             } else {
               // Notification for a new message
               console.log("New message from:", message.sender_id);
-              // You could add a UI notification here
             }
           }
           break;

@@ -40,9 +40,9 @@ type PostWithComments struct {
 }
 
 type Message struct {
-	Type       string `json:"type"`
-	SenderID   string `json:"sender_id"`
-	ReceiverID string `json:"receiver_id"`
-	Content    string `json:"content"`
-	SentAt     int    `json:"sent_at"`
+	Type       string    `json:"type"`
+	SenderID   string    `json:"sender_id"`
+	ReceiverID string    `json:"receiver_id"`
+	Content    string    `json:"content"`
+	SentAt     time.Time `json:"sent_at"`
 }

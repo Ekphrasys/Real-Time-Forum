@@ -1,6 +1,9 @@
 package database
 
-import "fmt"
+import (
+	"fmt"
+	"log"
+)
 
 // SavePrivateMessage saves a private message to the database
 func SavePrivateMessage(senderID, receiverID, content string) error {
@@ -11,17 +14,25 @@ func SavePrivateMessage(senderID, receiverID, content string) error {
 	return err
 }
 
-// GetPrivateMessages retrieves conversation history between two users
-func GetPrivateMessages(user1ID, user2ID string) ([]map[string]interface{}, error) {
-	rows, err := DB.Query(`
+// GetPrivateMessages retrieves paginated conversation history between two users
+func GetPrivateMessages(user1ID, user2ID string, page, limit int) ([]map[string]interface{}, error) {
+	offset := (page - 1) * limit
+
+	// Solution radicale: requête directe avec vérification
+	query := fmt.Sprintf(`
         SELECT id, sender_id, receiver_id, content, sent_at
         FROM messages
-        WHERE (sender_id = ? AND receiver_id = ?) 
-           OR (sender_id = ? AND receiver_id = ?)
-        ORDER BY sent_at`,
-		user1ID, user2ID, user2ID, user1ID)
+        WHERE (sender_id = '%s' AND receiver_id = '%s')
+           OR (sender_id = '%s' AND receiver_id = '%s')
+        ORDER BY sent_at DESC
+        LIMIT %d OFFSET %d`,
+		user1ID, user2ID, user2ID, user1ID, limit, offset)
+
+	log.Printf("🟢 REQUÊTE FORCÉE:\n%s", query)
+
+	rows, err := DB.Query(query)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("query error: %v", err)
 	}
 	defer rows.Close()
 
