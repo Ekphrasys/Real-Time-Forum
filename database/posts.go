@@ -5,7 +5,6 @@ import (
 	"Real-Time-Forum/shared"
 	"database/sql"
 	"fmt"
-	"log"
 	"time"
 )
 
@@ -24,15 +23,12 @@ func CreatePost(post models.Post) error {
 	if err != nil {
 		return fmt.Errorf("failed to insert post into database: %w", err)
 	}
-
-	fmt.Printf("Post created with UUID: %s\n", post.Id)
-	fmt.Println("Post created:", post.Title)
 	return nil
 }
 
 // GetAllPosts retrieves all posts from the database
 func GetAllPosts(db *sql.DB) ([]models.Post, error) {
-	log.Println("Fetching posts from database...")
+
 	query := `
     SELECT p.post_id, p.user_id, u.username, p.title, p.content, p.category, p.creation_date
     FROM Post p

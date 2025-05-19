@@ -106,15 +106,17 @@ export function displayMessage(msg) {
       : `${msg.sender_id}-${getCurrentUser().user_id}`;
   }
 
+ const timestamp = new Date(msg.timestamp || msg.sent_at);
+  const formattedDateTime = `${timestamp.toLocaleDateString()} ${timestamp.toLocaleTimeString()}`;
+
   messageElement.innerHTML = `
           <div class="message-content">${msg.content}</div>
-          <div class="message-time">${new Date(
-            msg.timestamp || msg.sent_at
-          ).toLocaleTimeString()}</div>
+          <div class="message-time">${formattedDateTime}</div>
       `;
   chatDiv.appendChild(messageElement);
   chatDiv.scrollTop = chatDiv.scrollHeight;
 }
+
 
 export async function loadMessageHistory(userId, loadMore = false) {
     if (isLoadingMessages) return;
@@ -232,7 +234,8 @@ function createMessageElement(msg) {
       typeof msg.sent_at === "string"
         ? msg.sent_at
         : msg.timestamp || new Date();
-    timeString = new Date(timestamp).toLocaleTimeString();
+  const formattedDate = new Date(timestamp);
+    timeString = `${formattedDate.toLocaleDateString()} ${formattedDate.toLocaleTimeString()}`;
   } catch (e) {
     timeString = "Unknown time";
   }

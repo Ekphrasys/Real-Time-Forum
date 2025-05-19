@@ -99,7 +99,6 @@ func MessagesHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	log.Printf("Paramètres FINALS - page: %d, limit: %d", page, limit)
 
 	// Appel à la fonction de base de données avec pagination
 	messages, err := database.GetPrivateMessages(userID, counterpartID, page, limit)

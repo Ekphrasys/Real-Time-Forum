@@ -34,7 +34,6 @@ h1::after {
   position: absolute;
   right: -50px;
   top: -15px;
-  animation: bobble 2s infinite alternate;
 }
 
 @keyframes bobble {
@@ -166,13 +165,6 @@ p {
   margin-right: 10px;
 }
 
-.user-status.online {
-  background-color: #4CAF50;
-}
-
-.user-status.offline {
-  background-color: #9E9E9E;
-}
 
 /* Chat styles */
 #chat-modal {

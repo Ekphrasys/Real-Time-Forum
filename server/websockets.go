@@ -122,7 +122,6 @@ func HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Reading error: %v", err)
 			break
 		}
-		log.Printf("Message received from %s: %s", userID, string(message))
 
 		// Determine message type
 		var msgType struct {

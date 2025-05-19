@@ -70,9 +70,6 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Log for debugging
-	fmt.Println("Posts handler called with method:", r.Method)
-
 	// Process based on HTTP method
 	if r.Method == http.MethodGet {
 		// GET: Retrieve all posts
@@ -91,8 +88,6 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		if posts == nil {
 			posts = []models.Post{} // Ensure we return an empty array, not null
 		}
-
-		fmt.Printf("Found %d posts\n", len(posts))
 
 		// Return posts as JSON
 		w.Header().Set("Content-Type", "application/json")

@@ -1,3 +1,33 @@
+import { routes } from "./routes.js";
+
+window.navigateTo = navigateTo;
+window.openChat = openChat;
+window.closeChat = closeChat;
+window.initChat = initChat;
+
+import {
+  attachLoginEventListener,
+  attachRegisterEventListener,
+  logout,
+} from "./auth.js";
+
+import {
+  loadPosts,
+  setupPostForm,
+  viewPost,
+} from "./posts.js";
+
+import {
+  updateUsersList,
+  displayMessage,
+  openChat,
+  closeChat,
+  initChat,
+  handleUserStatusChange,
+  currentChatPartner,
+  getCachedOnlineUsers,
+} from "./chat.js"
+
 let _currentUser = null;
 export const getCurrentUser = () => _currentUser;
 export const setCurrentUser = (user) => {
@@ -9,9 +39,6 @@ window.onload = function () {
   checkSession();
 };
 
-import { routes } from "./routes.js";
-
-// Function to navigate between pages
 export function navigateTo(page) {
   if (routes[page]) {
     const content = typeof routes[page] === "function" ? routes[page]() : routes[page];
@@ -39,19 +66,17 @@ function setupUserListToggle() {
     showOnlineUsersBtn.classList.add('active');
     showAllUsersBtn.classList.remove('active');
 
-    // Utiliser d'abord le cache
     const cachedUsers = getCachedOnlineUsers();
 
     if (cachedUsers && cachedUsers.length > 0) {
       updateUsersList(cachedUsers, true);
     }
 
-    // Puis demander une mise à jour via WebSocket
     if (window.websocket) {
-    window.websocket.send(JSON.stringify({
+      window.websocket.send(JSON.stringify({
         type: "get_online_users"
-    }));
-}
+      }));
+    }
   });
 
   showAllUsersBtn?.addEventListener('click', function () {
@@ -77,38 +102,6 @@ export function loadAllUsers() {
     .catch(error => console.error('Error fetching users:', error));
 }
 
-window.navigateTo = navigateTo;
-
-// Expose chat functions globally for chat
-window.openChat = openChat;
-window.closeChat = closeChat;
-window.initChat = initChat;
-
-import {
-  attachLoginEventListener,
-  attachRegisterEventListener,
-  logout,
-} from "./auth.js";
-
-import {
-  loadPosts,
-  setupPostForm,
-  viewPost,
-} from "./posts.js";
-
-import {
-  updateUsersList,
-  displayMessage,
-  openChat,
-  closeChat,
-  initChat,
-  handleUserStatusChange,
-  currentChatPartner,
-  getCachedOnlineUsers,
-  updateCachedOnlineUsers
-} from "./chat.js"
-
-// Verify if the session is still active
 function checkSession() {
   fetch("/check-session", { method: "GET", credentials: "include" })
     .then((response) => {
@@ -121,7 +114,6 @@ function checkSession() {
       }
     })
     .then((userData) => {
-      // Fermer l'ancien WebSocket s'il existe
       if (window.websocket) {
         window.websocket.close();
         window.websocket = null;
@@ -131,7 +123,6 @@ function checkSession() {
       window.currentUser = userData;
       updateNavigation(true);
 
-      // Initialiser le WebSocket et attendre qu'il soit prêt
       return initializeWebSocket().then(() => {
         navigateTo("home");
       });
@@ -146,19 +137,15 @@ export function updateNavigation(isAuthenticated) {
   const nav = document.getElementById("logout-button");
 }
 
-// Function to navigate to the home page
 function goToHome() {
   navigateTo("home");
 }
 
-// Expose functions to the global scope
 window.logout = logout;
 window.checkSession = checkSession;
 window.goToHome = goToHome;
 window.updateNavigation = updateNavigation;
 window.navigateTo = navigateTo;
-
-// Make sure to expose viewPost globally
 window.viewPost = viewPost;
 
 export function initializeWebSocket() {
@@ -175,20 +162,17 @@ export function initializeWebSocket() {
       window.websocket = socket;
 
       if (getCurrentUser()?.user_id) {
-        // D'abord s'identifier
         socket.send(JSON.stringify({
           type: "identify",
           user_id: getCurrentUser().user_id
         }));
 
-        // Ensuite envoyer la notification de connexion
         socket.send(JSON.stringify({
           type: "user_status",
           user_id: getCurrentUser().user_id,
           username: getCurrentUser().username
         }));
 
-        // Enfin, demander la liste des utilisateurs en ligne
         socket.send(JSON.stringify({
           type: "get_online_users"
         }));
@@ -202,11 +186,10 @@ export function initializeWebSocket() {
     };
 
     socket.onmessage = function (event) {
-    const message = JSON.parse(event.data);
+      const message = JSON.parse(event.data);
 
       switch (message.type) {
         case "online_users":
-            // Plus besoin de déduplication, on utilise directement les données
             updateUsersList(message.users.map(user => ({
                 ...user,
                 is_online: true
@@ -214,7 +197,6 @@ export function initializeWebSocket() {
             break;
         case "user_status":
           handleUserStatusChange(message);
-          // Si nous sommes en mode "online users", mettre à jour la liste
           const showOnlineUsersBtn = document.getElementById('show-online-users');
           if (showOnlineUsersBtn?.classList.contains('active')) {
             socket.send(JSON.stringify({
@@ -223,12 +205,9 @@ export function initializeWebSocket() {
           }
           break;
         case "private_message":
-          // Check if the message is intended for the current user
-          // OR if it comes from the current chat partner
           if (message.receiver_id === getCurrentUser?.user_id ||
             (currentChatPartner && message.sender_id === currentChatPartner.id)) {
 
-            // Check if we are in the correct conversation to display the message
             const isCorrectConversation =
               currentChatPartner &&
               (message.sender_id === currentChatPartner.id ||
@@ -240,9 +219,6 @@ export function initializeWebSocket() {
                 content: message.content,
                 timestamp: message.timestamp || Date.now()
               });
-            } else {
-              // Notification for a new message
-              console.log("New message from:", message.sender_id);
             }
           }
           break;
