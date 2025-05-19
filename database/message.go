@@ -2,7 +2,6 @@ package database
 
 import (
 	"fmt"
-	"log"
 )
 
 // SavePrivateMessage saves a private message to the database
@@ -27,8 +26,6 @@ func GetPrivateMessages(user1ID, user2ID string, page, limit int) ([]map[string]
         ORDER BY sent_at DESC
         LIMIT %d OFFSET %d`,
 		user1ID, user2ID, user2ID, user1ID, limit, offset)
-
-	log.Printf("🟢 REQUÊTE FORCÉE:\n%s", query)
 
 	rows, err := DB.Query(query)
 	if err != nil {

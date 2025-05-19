@@ -1,4 +1,4 @@
-import { routes } from "./main.js";
+import { routes } from "./routes.js";
 
 // Function to load and display posts
 export function loadPosts() {
