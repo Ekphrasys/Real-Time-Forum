@@ -55,36 +55,6 @@ export function navigateTo(page) {
   }
 }
 
-// function setupUserListToggle() {
-//   const showOnlineUsersBtn = document.getElementById('show-online-users');
-//   const showAllUsersBtn = document.getElementById('show-all-users');
-
-//   if (showOnlineUsersBtn && showAllUsersBtn) {
-//     showOnlineUsersBtn.addEventListener('click', function () {
-//       showOnlineUsersBtn.classList.add('active');
-//       showAllUsersBtn.classList.remove('active');
-
-//       const cachedUsers = getCachedOnlineUsers();
-
-//       if (cachedUsers && cachedUsers.length > 0) {
-//         updateUsersList(cachedUsers, true);
-//       }
-
-//       if (window.websocket) {
-//         window.websocket.send(JSON.stringify({
-//           type: "get_online_users"
-//         }));
-//       }
-//     });
-
-//     showAllUsersBtn.addEventListener('click', function () {
-//       showAllUsersBtn.classList.add('active');
-//       showOnlineUsersBtn.classList.remove('active');
-//       loadAllUsers();
-//     });
-//   }
-// }
-
 export function loadAllUsers() {
     fetch('/users', {
         method: 'GET',
@@ -186,11 +156,6 @@ export function initializeWebSocket() {
           type: "user_status",
           user_id: getCurrentUser().user_id,
           username: getCurrentUser().username
-        }));
-
-        // Demander tous les utilisateurs plutôt que seulement ceux en ligne
-        socket.send(JSON.stringify({
-          type: "get_all_users"
         }));
       }
       resolve(socket);

@@ -1,9 +1,7 @@
 package database
 
 import (
-	"database/sql"
 	"fmt"
-	"time"
 )
 
 // Manage saving and retrieving private messages in the database
@@ -62,26 +60,4 @@ func GetPrivateMessages(user1ID, user2ID string, page, limit int) ([]map[string]
 	}
 
 	return messages, nil
-}
-
-// Returns the timestamp of the last message between two users
-func GetLastMessageTimestamp(user1ID, user2ID string) (time.Time, error) {
-	var lastMessageTime time.Time
-
-	err := DB.QueryRow(`
-        SELECT MAX(sent_at) 
-        FROM messages 
-        WHERE (sender_id = ? AND receiver_id = ?) 
-           OR (sender_id = ? AND receiver_id = ?)`,
-		user1ID, user2ID, user2ID, user1ID,
-	).Scan(&lastMessageTime)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return time.Time{}, nil
-		}
-		return time.Time{}, fmt.Errorf("failed to query last message: %w", err)
-	}
-
-	return lastMessageTime, nil
 }

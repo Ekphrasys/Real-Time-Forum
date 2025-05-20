@@ -82,7 +82,6 @@ func GetAllUsers() ([]models.User, error) {
 	return users, nil
 }
 
-// user.go
 func GetOnlineUsers() ([]models.User, error) {
 	var onlineUsers []models.User
 
