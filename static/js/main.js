@@ -1,9 +1,6 @@
 import { routes } from "./routes.js";
 
 window.navigateTo = navigateTo;
-window.openChat = openChat;
-window.closeChat = closeChat;
-window.initChat = initChat;
 
 import {
   attachLoginEventListener,
@@ -26,7 +23,7 @@ import {
   handleUserStatusChange,
   currentChatPartner,
   getCachedOnlineUsers,
-} from "./chat.js"
+} from "./chat.js";
 
 let _currentUser = null;
 export const getCurrentUser = () => _currentUser;
@@ -62,28 +59,30 @@ function setupUserListToggle() {
   const showOnlineUsersBtn = document.getElementById('show-online-users');
   const showAllUsersBtn = document.getElementById('show-all-users');
 
-  showOnlineUsersBtn?.addEventListener('click', function () {
-    showOnlineUsersBtn.classList.add('active');
-    showAllUsersBtn.classList.remove('active');
+  if (showOnlineUsersBtn && showAllUsersBtn) {
+    showOnlineUsersBtn.addEventListener('click', function () {
+      showOnlineUsersBtn.classList.add('active');
+      showAllUsersBtn.classList.remove('active');
 
-    const cachedUsers = getCachedOnlineUsers();
+      const cachedUsers = getCachedOnlineUsers();
 
-    if (cachedUsers && cachedUsers.length > 0) {
-      updateUsersList(cachedUsers, true);
-    }
+      if (cachedUsers && cachedUsers.length > 0) {
+        updateUsersList(cachedUsers, true);
+      }
 
-    if (window.websocket) {
-      window.websocket.send(JSON.stringify({
-        type: "get_online_users"
-      }));
-    }
-  });
+      if (window.websocket) {
+        window.websocket.send(JSON.stringify({
+          type: "get_online_users"
+        }));
+      }
+    });
 
-  showAllUsersBtn?.addEventListener('click', function () {
-    showAllUsersBtn.classList.add('active');
-    showOnlineUsersBtn.classList.remove('active');
-    loadAllUsers();
-  });
+    showAllUsersBtn.addEventListener('click', function () {
+      showAllUsersBtn.classList.add('active');
+      showOnlineUsersBtn.classList.remove('active');
+      loadAllUsers();
+    });
+  }
 }
 
 export function loadAllUsers() {
@@ -108,7 +107,6 @@ function checkSession() {
       if (response.ok) {
         return response.json();
       } else {
-        updateNavigation(false);
         navigateTo("login");
         return Promise.reject("Not authenticated");
       }
@@ -121,7 +119,7 @@ function checkSession() {
 
       setCurrentUser(userData);
       window.currentUser = userData;
-      updateNavigation(true);
+      document.getElementById("logout-button");
 
       return initializeWebSocket().then(() => {
         navigateTo("home");
@@ -129,12 +127,7 @@ function checkSession() {
     })
     .catch((error) => {
       console.error("Session check error:", error);
-      updateNavigation(false);
     });
-}
-
-export function updateNavigation(isAuthenticated) {
-  const nav = document.getElementById("logout-button");
 }
 
 function goToHome() {
@@ -144,7 +137,6 @@ function goToHome() {
 window.logout = logout;
 window.checkSession = checkSession;
 window.goToHome = goToHome;
-window.updateNavigation = updateNavigation;
 window.navigateTo = navigateTo;
 window.viewPost = viewPost;
 
@@ -205,7 +197,7 @@ export function initializeWebSocket() {
           }
           break;
         case "private_message":
-          if (message.receiver_id === getCurrentUser?.user_id ||
+          if (message.receiver_id === getCurrentUser()?.user_id ||
             (currentChatPartner && message.sender_id === currentChatPartner.id)) {
 
             const isCorrectConversation =

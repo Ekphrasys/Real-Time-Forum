@@ -7,11 +7,13 @@ import (
 	"github.com/gofrs/uuid"
 )
 
+// Converts UUID to string
 func ParseUUID(id uuid.UUID) (UUID string) {
 	UUID = id.String()
 	return UUID
 }
 
+// GenerateUUID generates a new UUID
 func GenerateUUID() uuid.UUID {
 	id, err := uuid.NewV4()
 	if err != nil {

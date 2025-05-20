@@ -1,4 +1,4 @@
-import { navigateTo, updateNavigation, setCurrentUser } from "./main.js";
+import { navigateTo, setCurrentUser } from "./main.js";
 import { initializeWebSocket } from "./main.js";
 
 // Function to attach the event to the form
@@ -100,7 +100,7 @@ export function attachLoginEventListener() {
       console.log("User data updated, calling navigation");
       // Attendre que les données soient bien mises à jour
       setTimeout(() => {
-        updateNavigation(true);
+        document.getElementById("logout-button");
         initializeWebSocket();
         navigateTo("home");
       }, 50);
@@ -125,7 +125,6 @@ export function logout() {
       window.currentUser = null;
       setCurrentUser(null);
       
-      updateNavigation(false);
       navigateTo("login");
     })
     .catch((error) => console.error("Logout error:", error));

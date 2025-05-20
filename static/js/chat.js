@@ -122,7 +122,7 @@ export async function loadMessageHistory(userId, loadMore = false) {
     if (isLoadingMessages) return;
 
     if (!loadMore) {
-        // Réinitialiser tout pour un nouveau chat
+        // Reset everything for a new chat
         currentPage = 1;
         hasMoreMessages = true;
         allLoadedMessages = [];

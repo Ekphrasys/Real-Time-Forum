@@ -22,8 +22,6 @@ export function loadPosts() {
                 return;
             }
 
-            postsContainer.innerHTML = ""; // Clear previous posts
-
             // Add each post to the container
             posts.forEach((post) => {
                 // Convert ISO string to Date properly
@@ -60,7 +58,7 @@ export function loadPosts() {
 
                 // Add click handler for the entire post
                 postElement.addEventListener("click", function (e) {
-                    // Don't trigger if they clicked specifically on a button or link
+                    // Ignore clicks on buttons or links to prevent navigation conflicts
                     if (e.target.tagName === "BUTTON" || e.target.tagName === "A") {
                         return;
                     }

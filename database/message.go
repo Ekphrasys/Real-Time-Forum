@@ -4,6 +4,8 @@ import (
 	"fmt"
 )
 
+// Manage saving and retrieving private messages in the database
+
 // SavePrivateMessage saves a private message to the database
 func SavePrivateMessage(senderID, receiverID, content string) error {
 	_, err := DB.Exec(
@@ -17,7 +19,8 @@ func SavePrivateMessage(senderID, receiverID, content string) error {
 func GetPrivateMessages(user1ID, user2ID string, page, limit int) ([]map[string]interface{}, error) {
 	offset := (page - 1) * limit
 
-	// Solution radicale: requête directe avec vérification
+	// SQL query to get messages between two users
+	// Takes into account both directions of the conversation & pagination (LIMIT and OFFSET)
 	query := fmt.Sprintf(`
         SELECT id, sender_id, receiver_id, content, sent_at
         FROM messages
@@ -33,6 +36,7 @@ func GetPrivateMessages(user1ID, user2ID string, page, limit int) ([]map[string]
 	}
 	defer rows.Close()
 
+	// Messages are stored in a slice of maps
 	var messages []map[string]interface{}
 	for rows.Next() {
 		var id int

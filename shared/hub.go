@@ -18,12 +18,14 @@ func NewHub() *Hub {
 	}
 }
 
+// Add client to the hub
 func (h *Hub) AddClient(conn *websocket.Conn, username string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.clients[conn] = username
 }
 
+// Remove client from the hub
 func (h *Hub) RemoveClient(conn *websocket.Conn) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
