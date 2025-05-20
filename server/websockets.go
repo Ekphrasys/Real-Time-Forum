@@ -201,25 +201,3 @@ func broadcastUserStatus(userID, username, status string) {
 	}
 	connectionsLock.Unlock()
 }
-
-// AddClient(conn, userID)
-
-// Clean up the connection when done
-// defer func() {
-// 	conn.Close()
-// 	clientsMutex.Lock()
-// 	delete(clients, userID)
-// 	clientsMutex.Unlock()
-// 	log.Printf("Websocket Connexion closed for user %s", userID)
-// }()
-
-// Main loop to read messages from the WebSocket
-// 	for {
-// 		_, message, err := conn.ReadMessage()
-// 		if err != nil {
-// 			log.Printf("Reading error: %v", err)
-// 			break
-// 		}
-// 		log.Printf("Message received by %s: %s", userID, string(message))
-// 	}
-// }
