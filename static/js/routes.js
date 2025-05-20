@@ -52,8 +52,7 @@ export const routes = {
         <div class="main-content">
         <div class="users-container">
               <div class="user-list-toggle">
-                <button id="show-online-users" class="active">Online Users</button>
-                <button id="show-all-users">All Users</button>
+                <h3 id="show-all-users">All Users</h3>
               </div>
             <ul class="users-list">
               <!-- List dynamically -->

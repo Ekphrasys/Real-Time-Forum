@@ -22,7 +22,7 @@ import {
   initChat,
   handleUserStatusChange,
   currentChatPartner,
-  getCachedOnlineUsers,
+  getCachedUsers,
 } from "./chat.js";
 
 let _currentUser = null;
@@ -51,39 +51,39 @@ export function navigateTo(page) {
     setupPostForm();
     loadPosts();
     initChat();
-    setupUserListToggle();
+    loadAllUsers();
   }
 }
 
-function setupUserListToggle() {
-  const showOnlineUsersBtn = document.getElementById('show-online-users');
-  const showAllUsersBtn = document.getElementById('show-all-users');
+// function setupUserListToggle() {
+//   const showOnlineUsersBtn = document.getElementById('show-online-users');
+//   const showAllUsersBtn = document.getElementById('show-all-users');
 
-  if (showOnlineUsersBtn && showAllUsersBtn) {
-    showOnlineUsersBtn.addEventListener('click', function () {
-      showOnlineUsersBtn.classList.add('active');
-      showAllUsersBtn.classList.remove('active');
+//   if (showOnlineUsersBtn && showAllUsersBtn) {
+//     showOnlineUsersBtn.addEventListener('click', function () {
+//       showOnlineUsersBtn.classList.add('active');
+//       showAllUsersBtn.classList.remove('active');
 
-      const cachedUsers = getCachedOnlineUsers();
+//       const cachedUsers = getCachedOnlineUsers();
 
-      if (cachedUsers && cachedUsers.length > 0) {
-        updateUsersList(cachedUsers, true);
-      }
+//       if (cachedUsers && cachedUsers.length > 0) {
+//         updateUsersList(cachedUsers, true);
+//       }
 
-      if (window.websocket) {
-        window.websocket.send(JSON.stringify({
-          type: "get_online_users"
-        }));
-      }
-    });
+//       if (window.websocket) {
+//         window.websocket.send(JSON.stringify({
+//           type: "get_online_users"
+//         }));
+//       }
+//     });
 
-    showAllUsersBtn.addEventListener('click', function () {
-      showAllUsersBtn.classList.add('active');
-      showOnlineUsersBtn.classList.remove('active');
-      loadAllUsers();
-    });
-  }
-}
+//     showAllUsersBtn.addEventListener('click', function () {
+//       showAllUsersBtn.classList.add('active');
+//       showOnlineUsersBtn.classList.remove('active');
+//       loadAllUsers();
+//     });
+//   }
+// }
 
 export function loadAllUsers() {
     fetch('/users', {
@@ -93,10 +93,33 @@ export function loadAllUsers() {
     })
     .then(response => response.json())
     .then(users => {
-        updateUsersList(users.map(user => ({
-            ...user,
-            is_online: user.is_online || false
-        })), false);
+        // Pour chaque utilisateur, vérifier s'il est en ligne en comparant avec les utilisateurs en ligne
+        fetch('/online-users', {
+            method: 'GET',
+            headers: {'Accept': 'application/json'},
+            credentials: 'include'
+        })
+        .then(response => response.json())
+        .then(onlineUsers => {
+            // Créer un Set des IDs des utilisateurs en ligne pour une recherche efficace
+            const onlineUserIds = new Set(onlineUsers.map(u => u.user_id));
+            
+            // Mettre à jour le statut en ligne de chaque utilisateur
+            const combinedUsers = users.map(user => ({
+                ...user,
+                is_online: onlineUserIds.has(user.user_id)
+            }));
+            
+            updateUsersList(combinedUsers);
+        })
+        .catch(error => {
+            console.error('Error fetching online users:', error);
+            // En cas d'erreur, afficher quand même tous les utilisateurs
+            updateUsersList(users.map(user => ({
+                ...user,
+                is_online: false
+            })));
+        });
     })
     .catch(error => console.error('Error fetching users:', error));
 }
@@ -165,8 +188,9 @@ export function initializeWebSocket() {
           username: getCurrentUser().username
         }));
 
+        // Demander tous les utilisateurs plutôt que seulement ceux en ligne
         socket.send(JSON.stringify({
-          type: "get_online_users"
+          type: "get_all_users"
         }));
       }
       resolve(socket);
@@ -182,19 +206,17 @@ export function initializeWebSocket() {
 
       switch (message.type) {
         case "online_users":
-            updateUsersList(message.users.map(user => ({
-                ...user,
-                is_online: true
-            })), true);
+            // Mise à jour des utilisateurs en ligne dans notre liste unifiée
+            loadAllUsers(); // Recharger tous les utilisateurs avec le statut mis à jour
+            break;
+        case "all_users":
+            // Nouveau type de message pour tous les utilisateurs
+            updateUsersList(message.users);
             break;
         case "user_status":
           handleUserStatusChange(message);
-          const showOnlineUsersBtn = document.getElementById('show-online-users');
-          if (showOnlineUsersBtn?.classList.contains('active')) {
-            socket.send(JSON.stringify({
-              type: "get_online_users"
-            }));
-          }
+          // Après un changement de statut, actualiser la liste complète
+          loadAllUsers();
           break;
         case "private_message":
           if (message.receiver_id === getCurrentUser()?.user_id ||

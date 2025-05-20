@@ -1,30 +1,25 @@
 import { setCurrentUser, getCurrentUser } from "./main.js";
 
 export let currentChatPartner = null;
-let showingOnlineUsers = true;
-let cachedOnlineUsers = [];
+let cachedUsers = []; // Changement: nous stockons tous les utilisateurs, pas seulement ceux en ligne
 let pendingStatusUpdates = {};
 
 let currentPage = 1;
 let isLoadingMessages = false;
 let hasMoreMessages = true;
-let allLoadedMessages = [];  // Ajout pour stocker tous les messages chargés
+let allLoadedMessages = [];
 
-export function setShowingOnlineUsers(value) {
-  showingOnlineUsers = value;
+// Suppression de la fonction setShowingOnlineUsers qui n'est plus nécessaire
+
+export function getCachedUsers() {
+  return cachedUsers;
 }
 
-export function getCachedOnlineUsers() {
-  return cachedOnlineUsers;
+export function updateCachedUsers(users) {
+  cachedUsers = users;
 }
 
-export function updateCachedOnlineUsers(users) {
-  cachedOnlineUsers = users;
-}
-
-export function updateUsersList(users, onlineOnly = true) {
-  showingOnlineUsers = onlineOnly;
-
+export function updateUsersList(users) {
   const usersList = document.querySelector(".users-list");
   if (!usersList) return;
 
@@ -32,35 +27,34 @@ export function updateUsersList(users, onlineOnly = true) {
   const currentUserId = getCurrentUser()?.user_id;
 
   if (!users || !users.length) {
-    usersList.innerHTML = `<div class="no-users">${
-      onlineOnly ? "No users online" : "No users found"
-    }</div>`;
+    usersList.innerHTML = '<div class="no-users">No users found</div>';
     return;
   }
+
+  // sort by username
+  users.sort((a, b) => {
+    return a.username.localeCompare(b.username);
+  });
 
   users.forEach((user) => {
     const isCurrentUser = user.user_id === currentUserId;
     const item = document.createElement("li");
-    item.className = `user-item ${user.is_online ? "online" : "offline"} ${
-      isCurrentUser ? "current-user" : ""
-    }`;
+    item.className = `user-item ${isCurrentUser ? "current-user" : ""}`;
     item.dataset.userId = user.user_id;
     item.dataset.username = user.username;
     item.innerHTML = `
-            <div class="user-status ${
-              user.is_online ? "online" : "offline"
-            }"></div>
+            <div class="user-status ${user.is_online ? "online" : "offline"}"></div>
             <div class="user-name">${user.username}</div>
         `;
     usersList.appendChild(item);
   });
 
-  if (onlineOnly) {
-    updateCachedOnlineUsers(users.filter((user) => user.is_online));
-  }
+  // Mettre à jour notre cache local
+  updateCachedUsers(users);
 }
 
 export function sendMessage() {
+  // Le reste de la fonction reste inchangé
   if (!currentChatPartner || !getCurrentUser()?.user_id) return;
 
   const input = document.getElementById("message-input");
@@ -81,7 +75,6 @@ export function sendMessage() {
       timestamp: Date.now(),
     };
     
-    // Ajouter le nouveau message à notre tableau de messages
     allLoadedMessages.push(newMessage);
     displayMessage(newMessage);
 
@@ -198,9 +191,6 @@ export async function loadMessageHistory(userId, loadMore = false) {
             currentPage++;
             hasMoreMessages = data.length === pageSize;
         } else {
-            if (!loadMore) {
-                chatDiv.innerHTML = '<div class="no-messages">No messages found.</div>';
-            }
             hasMoreMessages = false;
         }
     } catch (error) {
@@ -373,112 +363,34 @@ function processUserStatusUpdate(message) {
   const usersList = document.querySelector(".users-list");
   if (!usersList) return;
 
-  if (message.status === "online") {
-    const newCachedUsers = [...cachedOnlineUsers];
-    const existingIndex = newCachedUsers.findIndex(
-      (u) => u.user_id === message.user_id
-    );
+  // Mettre à jour le cache local
+  const newCachedUsers = [...cachedUsers];
+  const existingIndex = newCachedUsers.findIndex(
+    (u) => u.user_id === message.user_id
+  );
 
-    if (existingIndex === -1) {
-      newCachedUsers.push({
-        user_id: message.user_id,
-        username: message.username,
-        is_online: true,
-      });
-    } else {
-      newCachedUsers[existingIndex].is_online = true;
-    }
-    updateCachedOnlineUsers(newCachedUsers);
-  } else if (message.status === "offline") {
-    updateCachedOnlineUsers(
-      cachedOnlineUsers.filter((u) => u.user_id !== message.user_id)
-    );
+  if (existingIndex === -1) {
+    // Nouvel utilisateur, l'ajouter à la liste
+    newCachedUsers.push({
+      user_id: message.user_id,
+      username: message.username,
+      is_online: message.status === "online",
+    });
+  } else {
+    // Mettre à jour le statut d'un utilisateur existant
+    newCachedUsers[existingIndex].is_online = message.status === "online";
   }
+  
+  // Trier et mettre à jour la liste complète
+  updateCachedUsers(newCachedUsers);
+  updateUsersList(newCachedUsers);
 
-  if (message.status === "online") {
-    const existingUser = usersList.querySelector(
-      `[data-user-id="${message.user_id}"]`
-    );
-
-    if (!existingUser) {
-      if (showingOnlineUsers) {
-        const item = document.createElement("li");
-        item.className = "user-item online";
-        item.dataset.userId = message.user_id;
-        item.dataset.username = message.username;
-
-        const statusDiv = document.createElement("div");
-        statusDiv.className = "user-status online";
-
-        const nameDiv = document.createElement("div");
-        nameDiv.className = "user-name";
-        nameDiv.textContent = message.username;
-
-        item.appendChild(statusDiv);
-        item.appendChild(nameDiv);
-
-        if (String(message.user_id) !== String(getCurrentUser()?.user_id)) {
-          item.style.cursor = "pointer";
-          item.addEventListener("click", () => {
-            openChat(message.user_id, message.username);
-          });
-        } else {
-          item.classList.add("current-user");
-        }
-
-        usersList.appendChild(item);
-
-        const noUsersMsg = usersList.querySelector(".no-users");
-        if (noUsersMsg) {
-          noUsersMsg.remove();
-        }
-      }
-    } else {
-      existingUser.classList.remove("offline");
-      existingUser.classList.add("online");
-      const statusElement = existingUser.querySelector(".user-status");
-      if (statusElement) {
-        statusElement.className = "user-status online";
-      }
-    }
-  }
-  else if (message.status === "offline") {
-    const userItem = usersList.querySelector(
-      `[data-user-id="${message.user_id}"]`
-    );
-
-    if (userItem) {
-      if (showingOnlineUsers) {
-        userItem.style.transition = "opacity 0.5s";
-        userItem.style.opacity = "0";
-
-        setTimeout(() => {
-          userItem.remove();
-
-          const remainingUsers = usersList.querySelectorAll(".user-item");
-          if (remainingUsers.length === 0) {
-            const noUsersMsg = document.createElement("div");
-            noUsersMsg.className = "no-users";
-            noUsersMsg.textContent = "No users online";
-            usersList.appendChild(noUsersMsg);
-          }
-        }, 500);
-      } else {
-        userItem.classList.remove("online");
-        userItem.classList.add("offline");
-        const statusElement = userItem.querySelector(".user-status");
-        if (statusElement) {
-          statusElement.className = "user-status offline";
-        }
-      }
-    }
-  }
-
-  if (window.websocket && showingOnlineUsers) {
+  // Demander une mise à jour complète de la liste
+  if (window.websocket) {
     setTimeout(() => {
       window.websocket.send(
         JSON.stringify({
-          type: "get_online_users",
+          type: "get_all_users",
         })
       );
     }, 300);
