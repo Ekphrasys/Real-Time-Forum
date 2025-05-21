@@ -1,5 +1,5 @@
-import { navigateTo, setCurrentUser } from "./main.js";
-import { initializeWebSocket } from "./main.js";
+import { navigateTo, initializeWebSocket } from "./main.js";
+import { setCurrentUser } from "./users.js";
 
 // Function to attach the event to the form
 export function attachRegisterEventListener() {

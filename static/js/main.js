@@ -8,29 +8,24 @@ import {
   logout,
 } from "./auth.js";
 
-import {
-  loadPosts,
-  setupPostForm,
-  viewPost,
-} from "./posts.js";
+import { loadPosts, setupPostForm, viewPost } from "./posts.js";
+
+import { updateUsersList,
+  getCachedUsers,
+  updateCachedUsers,
+  loadAllUsers,
+  handleUserStatusChange,
+  getCurrentUser,
+  setCurrentUser,
+ } from "./users.js";
 
 import {
-  updateUsersList,
   displayMessage,
   openChat,
   closeChat,
   initChat,
-  handleUserStatusChange,
   currentChatPartner,
-  getCachedUsers,
 } from "./chat.js";
-
-let _currentUser = null;
-export const getCurrentUser = () => _currentUser;
-export const setCurrentUser = (user) => {
-  console.log("Setting current user to:", user);
-  _currentUser = user;
-};
 
 window.onload = function () {
   checkSession();
@@ -38,7 +33,8 @@ window.onload = function () {
 
 export function navigateTo(page) {
   if (routes[page]) {
-    const content = typeof routes[page] === "function" ? routes[page]() : routes[page];
+    const content =
+      typeof routes[page] === "function" ? routes[page]() : routes[page];
     document.getElementById("app").innerHTML = content;
     history.pushState({}, page, `#${page}`);
   }
@@ -53,46 +49,6 @@ export function navigateTo(page) {
     initChat();
     loadAllUsers();
   }
-}
-
-export function loadAllUsers() {
-    fetch('/users/ordered-by-last-message', {
-        method: 'GET',
-        headers: {'Accept': 'application/json'},
-        credentials: 'include'
-    })
-    .then(response => response.json())
-    .then(users => {
-        // Pour chaque utilisateur, vérifier s'il est en ligne en comparant avec les utilisateurs en ligne
-        fetch('/online-users', {
-            method: 'GET',
-            headers: {'Accept': 'application/json'},
-            credentials: 'include'
-        })
-        .then(response => response.json())
-        .then(onlineUsers => {
-            // Créer un Set des IDs des utilisateurs en ligne pour une recherche efficace
-            const onlineUserIds = new Set(onlineUsers.map(u => u.user_id));
-            
-            // Mettre à jour le statut en ligne de chaque utilisateur
-            const combinedUsers = users.map(user => ({
-                ...user,
-                is_online: onlineUserIds.has(user.user_id),
-                has_messages: user.last_message_content !==''
-            }));
-            
-            updateUsersList(combinedUsers);
-        })
-        .catch(error => {
-            console.error('Error fetching online users:', error);
-            // En cas d'erreur, afficher quand même tous les utilisateurs
-            updateUsersList(users.map(user => ({
-                ...user,
-                is_online: false
-            })));
-        });
-    })
-    .catch(error => console.error('Error fetching users:', error));
 }
 
 function checkSession() {
@@ -148,16 +104,20 @@ export function initializeWebSocket() {
       window.websocket = socket;
 
       if (getCurrentUser()?.user_id) {
-        socket.send(JSON.stringify({
-          type: "identify",
-          user_id: getCurrentUser().user_id
-        }));
+        socket.send(
+          JSON.stringify({
+            type: "identify",
+            user_id: getCurrentUser().user_id,
+          })
+        );
 
-        socket.send(JSON.stringify({
-          type: "user_status",
-          user_id: getCurrentUser().user_id,
-          username: getCurrentUser().username
-        }));
+        socket.send(
+          JSON.stringify({
+            type: "user_status",
+            user_id: getCurrentUser().user_id,
+            username: getCurrentUser().username,
+          })
+        );
       }
       resolve(socket);
     };
@@ -172,35 +132,52 @@ export function initializeWebSocket() {
 
       switch (message.type) {
         case "online_users":
-            // Mise à jour des utilisateurs en ligne dans notre liste unifiée
-            loadAllUsers(); // Recharger tous les utilisateurs avec le statut mis à jour
-            break;
+          // Mise à jour des utilisateurs en ligne dans notre liste unifiée
+          loadAllUsers(); // Recharger tous les utilisateurs avec le statut mis à jour
+          break;
         case "all_users":
-            // Nouveau type de message pour tous les utilisateurs
-            updateUsersList(message.users);
-            break;
+          // Nouveau type de message pour tous les utilisateurs
+          updateUsersList(message.users);
+          break;
         case "user_status":
           handleUserStatusChange(message);
           // Après un changement de statut, actualiser la liste complète
           loadAllUsers();
           break;
         case "private_message":
-          if (message.receiver_id === getCurrentUser()?.user_id ||
-            (currentChatPartner && message.sender_id === currentChatPartner.id)) {
+            if (
+    message.receiver_id === getCurrentUser()?.user_id ||
+    (currentChatPartner && message.sender_id === currentChatPartner.id)
+  ) {
+    const isCorrectConversation =
+      currentChatPartner &&
+      (message.sender_id === currentChatPartner.id ||
+        message.receiver_id === currentChatPartner.id);
 
-            const isCorrectConversation =
-              currentChatPartner &&
-              (message.sender_id === currentChatPartner.id ||
-                message.receiver_id === currentChatPartner.id);
-
-            if (isCorrectConversation) {
-              displayMessage({
-                sender_id: message.sender_id,
-                content: message.content,
-                timestamp: message.timestamp || Date.now()
-              });
-            }
-          }
+    if (isCorrectConversation) {
+      displayMessage({
+        sender_id: message.sender_id,
+        content: message.content,
+        timestamp: message.timestamp || Date.now(),
+      });
+    }
+  }
+  
+  // Mise à jour optimiste de la liste des utilisateurs
+  const updatedUsers = [...getCachedUsers()];
+  const partnerId = message.is_sent ? message.receiver_id : message.sender_id;
+  const partnerIndex = updatedUsers.findIndex(u => u.user_id === partnerId);
+  
+  if (partnerIndex > -1) {
+    const [partner] = updatedUsers.splice(partnerIndex, 1);
+    partner.last_message_content = message.content;
+    partner.last_message_timestamp = message.timestamp || Date.now();
+    updatedUsers.unshift(partner);
+    updateCachedUsers(updatedUsers);
+    updateUsersList(updatedUsers);
+  }
+          // Rafraîchir la liste dans tous les cas, même pour les messages envoyés
+          setTimeout(() => loadAllUsers(), 100);
           break;
       }
     };

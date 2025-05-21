@@ -1,4 +1,4 @@
-import { getCurrentUser } from "./main.js";
+import { getCurrentUser } from "./users.js";
 
 export const routes = {
   register: function () {
