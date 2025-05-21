@@ -26,32 +26,29 @@ export function updateUsersList(users) {
   usersList.innerHTML = "";
   const currentUserId = getCurrentUser()?.user_id;
 
-  if (!users || !users.length) {
-    usersList.innerHTML = '<div class="no-users">No users found</div>';
-    return;
-  }
-
-  // sort by username
-  users.sort((a, b) => {
-    return a.username.localeCompare(b.username);
-  });
-
   users.forEach((user) => {
     const isCurrentUser = user.user_id === currentUserId;
     const item = document.createElement("li");
     item.className = `user-item ${isCurrentUser ? "current-user" : ""}`;
     item.dataset.userId = user.user_id;
     item.dataset.username = user.username;
+  
+    // Ajouter un indicateur de dernier message
+    const lastMessageInfo = user.last_message_content
+
     item.innerHTML = `
-            <div class="user-status ${user.is_online ? "online" : "offline"}"></div>
-            <div class="user-name">${user.username}</div>
-        `;
+      <div class="user-status ${user.is_online ? "online" : "offline"}"></div>
+      <div class="user-info">
+        <div class="user-name">${user.username}</div>
+      </div>
+    `;
     usersList.appendChild(item);
   });
 
-  // Mettre à jour notre cache local
   updateCachedUsers(users);
 }
+
+
 
 export function sendMessage() {
   // Le reste de la fonction reste inchangé
@@ -390,7 +387,7 @@ function processUserStatusUpdate(message) {
     setTimeout(() => {
       window.websocket.send(
         JSON.stringify({
-          type: "get_all_users",
+          type: "get_online_users",
         })
       );
     }, 300);

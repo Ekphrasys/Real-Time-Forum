@@ -56,7 +56,7 @@ export function navigateTo(page) {
 }
 
 export function loadAllUsers() {
-    fetch('/users', {
+    fetch('/users/ordered-by-last-message', {
         method: 'GET',
         headers: {'Accept': 'application/json'},
         credentials: 'include'
@@ -77,7 +77,8 @@ export function loadAllUsers() {
             // Mettre à jour le statut en ligne de chaque utilisateur
             const combinedUsers = users.map(user => ({
                 ...user,
-                is_online: onlineUserIds.has(user.user_id)
+                is_online: onlineUserIds.has(user.user_id),
+                has_messages: user.last_message_content !==''
             }));
             
             updateUsersList(combinedUsers);

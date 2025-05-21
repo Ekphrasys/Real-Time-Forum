@@ -14,7 +14,7 @@ func SetupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/messages", MessagesHandler)
 	mux.HandleFunc("/users", AllUsersHandler)
 	mux.HandleFunc("/online-users", OnlineUsersHandler)
-	// mux.HandleFunc("/last-message", LastMessageHandler)
+	mux.HandleFunc("/users/ordered-by-last-message", UsersOrderedByLastMessageHandler)
 	// hub := shared.NewHub()
 
 	mux.HandleFunc("/posts", PostsHandler)
