@@ -10,14 +10,21 @@ import {
 
 import { loadPosts, setupPostForm, viewPost } from "./posts.js";
 
-import { updateUsersList,
+import {
+  addNotification,
+  markAsRead,
+  initNotifications,
+} from "./notifications.js";
+
+import {
+  updateUsersList,
   getCachedUsers,
   updateCachedUsers,
   loadAllUsers,
   handleUserStatusChange,
   getCurrentUser,
   setCurrentUser,
- } from "./users.js";
+} from "./users.js";
 
 import {
   displayMessage,
@@ -48,6 +55,7 @@ export function navigateTo(page) {
     loadPosts();
     initChat();
     loadAllUsers();
+    setTimeout(() => initNotifications(), 100);
   }
 }
 
@@ -145,37 +153,69 @@ export function initializeWebSocket() {
           loadAllUsers();
           break;
         case "private_message":
-            if (
-    message.receiver_id === getCurrentUser()?.user_id ||
-    (currentChatPartner && message.sender_id === currentChatPartner.id)
-  ) {
-    const isCorrectConversation =
-      currentChatPartner &&
-      (message.sender_id === currentChatPartner.id ||
-        message.receiver_id === currentChatPartner.id);
+          console.log("DEBUG: Message privé reçu:", message);
+          console.log("DEBUG: Utilisateur actuel:", getCurrentUser());
 
-    if (isCorrectConversation) {
-      displayMessage({
-        sender_id: message.sender_id,
-        content: message.content,
-        timestamp: message.timestamp || Date.now(),
-      });
-    }
-  }
-  
-  // Mise à jour optimiste de la liste des utilisateurs
-  const updatedUsers = [...getCachedUsers()];
-  const partnerId = message.is_sent ? message.receiver_id : message.sender_id;
-  const partnerIndex = updatedUsers.findIndex(u => u.user_id === partnerId);
-  
-  if (partnerIndex > -1) {
-    const [partner] = updatedUsers.splice(partnerIndex, 1);
-    partner.last_message_content = message.content;
-    partner.last_message_timestamp = message.timestamp || Date.now();
-    updatedUsers.unshift(partner);
-    updateCachedUsers(updatedUsers);
-    updateUsersList(updatedUsers);
-  }
+          // Ajouter le receiver_id si manquant
+          if (
+            !message.receiver_id &&
+            message.sender_id !== getCurrentUser()?.user_id
+          ) {
+            // Si je ne suis pas l'expéditeur, je suis forcément le destinataire
+            message.receiver_id = getCurrentUser().user_id;
+            console.log("DEBUG: Ajout du receiver_id manquant:", message);
+          }
+
+          if (message.receiver_id === getCurrentUser()?.user_id) {
+            console.log("DEBUG: Le message est bien pour l'utilisateur actuel");
+
+            // Obtenir les infos de l'expéditeur
+            const sender = getCachedUsers().find(
+              (u) => u.user_id === message.sender_id
+            );
+            const senderName = sender ? sender.username : "Unknown user";
+
+            const isCorrectConversation =
+              currentChatPartner &&
+              String(message.sender_id) === String(currentChatPartner.id); // Il y avait pas les String(). Je teste un truc.
+
+            if (isCorrectConversation) {
+              console.log("Affichage du message dans la conversation active");
+              displayMessage({
+                sender_id: message.sender_id,
+                content: message.content,
+                timestamp: message.timestamp || Date.now(),
+              });
+            } else {
+              console.log("Création notification pour:", senderName);
+
+              // Créer une notification
+              addNotification(
+                message.sender_id,
+                senderName,
+                message.content,
+                message.timestamp || Date.now()
+              );
+            }
+          }
+
+          // Mise à jour optimiste de la liste des utilisateurs
+          const updatedUsers = [...getCachedUsers()];
+          const partnerId = message.is_sent
+            ? message.receiver_id
+            : message.sender_id;
+          const partnerIndex = updatedUsers.findIndex(
+            (u) => u.user_id === partnerId
+          );
+
+          if (partnerIndex > -1) {
+            const [partner] = updatedUsers.splice(partnerIndex, 1);
+            partner.last_message_content = message.content;
+            partner.last_message_timestamp = message.timestamp || Date.now();
+            updatedUsers.unshift(partner);
+            updateCachedUsers(updatedUsers);
+            updateUsersList(updatedUsers);
+          }
           // Rafraîchir la liste dans tous les cas, même pour les messages envoyés
           setTimeout(() => loadAllUsers(), 100);
           break;

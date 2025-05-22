@@ -461,3 +461,109 @@ form:hover::before {
     content: "🐥";
   }
 }
+
+/* Styles pour le système de notification */
+.notification-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-right: 25px;
+  padding: 5px;
+  min-width: 40px;
+  min-height: 40px;
+}
+
+#notification-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  position: relative;
+  padding: 8px;
+  transition: transform 0.2s;
+  z-index: 100;
+  /* width: 40px;
+  height: 40px; */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#notification-button:hover {
+  transform: scale(1.1);
+}
+
+.notification-badge {
+  position: absolute;
+  top: 5px;
+  right: 0px;
+  background-color: #FF5722;
+  color: white;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  font-size: 12px;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+  z-index: 101;
+  border: 1px solid white;
+}
+
+.notification-panel {
+  position: absolute;
+  top: 40px;
+  right: 0;
+  background-color: white;
+  border: 3px solid #FFEB3B;
+  border-radius: 20px;
+  box-shadow: 5px 5px 0 #FF9800;
+  padding: 10px;
+  width: 250px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 100;
+  display: none;
+}
+
+.notification-item {
+  padding: 10px;
+  border-bottom: 1px dashed #FFC107;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.notification-item:last-child {
+  border-bottom: none;
+}
+
+.notification-item:hover {
+  background-color: #FFF9C4;
+}
+
+.notification-content {
+  font-size: 14px;
+}
+
+.notification-time {
+  font-size: 12px;
+  color: #999;
+  margin-top: 5px;
+}
+
+.empty-notification {
+  padding: 15px;
+  text-align: center;
+  color: #999;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.has-notification {
+  animation: pulse 1.5s infinite;
+}

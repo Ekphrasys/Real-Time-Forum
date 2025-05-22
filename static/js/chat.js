@@ -1,11 +1,14 @@
 import { setCurrentUser } from "./users.js";
 
-import { loadAllUsers,
+import {
+  loadAllUsers,
   updateUsersList,
   updateCachedUsers,
   getCurrentUser,
   cachedUsers,
 } from "./users.js";
+
+import { markAsRead } from "./notifications.js";
 
 export let currentChatPartner = null;
 
@@ -23,8 +26,10 @@ export function sendMessage() {
   if (content) {
     // Optimistic UI update - update the cached users immediately
     const updatedUsers = [...cachedUsers];
-    const partnerIndex = updatedUsers.findIndex(u => u.user_id === currentChatPartner.id);
-    
+    const partnerIndex = updatedUsers.findIndex(
+      (u) => u.user_id === currentChatPartner.id
+    );
+
     if (partnerIndex > -1) {
       // Move the partner to top of the list
       const [partner] = updatedUsers.splice(partnerIndex, 1);
@@ -229,6 +234,9 @@ export function openChat(userId, username) {
   if (!userId || !username) return;
 
   const id = String(userId);
+
+  // Marquer les notifications de cet utilisateur comme lues
+  markAsRead(id);
 
   currentPage = 1;
   hasMoreMessages = true;

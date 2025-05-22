@@ -1,5 +1,7 @@
 import { getCurrentUser } from "./users.js";
 
+import { addNotification, initNotifications } from "./notifications.js";
+
 export const routes = {
   register: function () {
     return `
@@ -44,7 +46,18 @@ export const routes = {
       <header>
           <h1>Holy Chicken Order</h1>
             <div class="user-info">
-          <p id="welcome">Welcome, ${getCurrentUser() ? getCurrentUser().username : "Guest"}</p>
+          <p id="welcome">Welcome, ${
+            getCurrentUser() ? getCurrentUser().username : "Guest"
+          }</p>
+              
+              <!-- Ajouter le bouton de notification ici -->
+              <div class="notification-container">
+                <button id="notification-button">🔔
+                  <span class="notification-badge"></span>
+                </button>
+                <div class="notification-panel"></div>
+              </div>
+              
               <button id="logout-button" onclick="console.log('Button clicked'); logout();">Logout</button>
             </div>
       </header>
@@ -98,7 +111,9 @@ export const routes = {
       <header>
         <h1>Holy Chicken Order</h1>
         <div class="user-info">
-          <p id="welcome">Welcome, ${getCurrentUser() ? getCurrentUser().username : "Guest"}</p>
+          <p id="welcome">Welcome, ${
+            getCurrentUser() ? getCurrentUser().username : "Guest"
+          }</p>
           <button onclick="navigateTo('home')">Back to Forum</button>
           <button id="logout-button" onclick="console.log('Button clicked'); logout();">Logout</button>
         </div>
