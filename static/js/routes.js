@@ -99,6 +99,7 @@ export const routes = {
               <button class="close-chat">×</button>
           </div>
           <div class="chat-messages" id="chat-messages"></div>
+          <div id="typing-indicator"></div>
           <div class="chat-input">
               <input type="text" id="message-input" placeholder="Type your message...">
               <button id="send-message-btn">Send</button>

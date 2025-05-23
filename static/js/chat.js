@@ -17,6 +17,8 @@ let isLoadingMessages = false;
 let hasMoreMessages = true;
 let allLoadedMessages = [];
 
+let typingTimeout;
+
 export function sendMessage() {
   if (!currentChatPartner || !getCurrentUser()?.user_id) return;
 
@@ -329,6 +331,19 @@ export function initChat() {
         sendMessage();
       }
     });
+
+    messageInput.addEventListener("input", handleTyping);
+    messageInput.addEventListener("keydown", handleTyping);
+    messageInput.addEventListener("blur", () => {
+      if (window.websocket && currentChatPartner) {
+        window.websocket.send(
+          JSON.stringify({
+            type: "typing_stop",
+            receiver_id: currentChatPartner.id,
+          })
+        );
+      }
+    });
   }
 
   const closeBtn = document.querySelector(".close-chat");
@@ -340,5 +355,51 @@ export function initChat() {
   if (chatMessages) {
     const throttledScrollHandler = throttle(handleScrollForLoading, 300);
     chatMessages.addEventListener("scroll", throttledScrollHandler);
+  }
+}
+
+export function handleTyping() {
+  if (!currentChatPartner || !window.websocket) return;
+  console.log("Sending typing_start to", currentChatPartner.id);
+
+  // send typing start event to the server
+  window.websocket.send(
+    JSON.stringify({
+      type: "typing_start",
+      receiver_id: currentChatPartner.id,
+    })
+  );
+}
+
+// Show and hide the typing indicator
+export function showTypingIndicator(show, username = "") {
+  const indicator = document.getElementById("typing-indicator");
+  if (!indicator) {
+    console.error("Typing indicator element not found!");
+    return;
+  }
+
+  // Check is HTML already exists and if not, create it (to have a smooth animation)
+  if (!indicator.querySelector(".typing-message")) {
+    indicator.innerHTML = `
+      <div class="typing-message">
+        <span class="typing-text"></span>
+        <span class="typing-dots">
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+        </span>
+      </div>
+    `;
+  }
+
+  const typingText = indicator.querySelector(".typing-text");
+
+  if (show && username) {
+    typingText.textContent = `${username} is typing`;
+    indicator.style.display = "block";
+  } else {
+    indicator.style.display = "none";
+    typingText.textContent = "";
   }
 }

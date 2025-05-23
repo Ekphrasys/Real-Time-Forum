@@ -18,6 +18,8 @@ const (
 	Identify         = "identify"
 	GetOnlineUsers   = "get_online_users"
 	OnlineUsersList  = "online_users"
+	TypingStart      = "typing_start"
+	TypingStop       = "typing_stop"
 )
 
 // Upgrader to handle WebSocket connections
@@ -144,6 +146,13 @@ func HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 		case GetOnlineUsers:
 			// Send online users list to requester
 			sendOnlineUsersList(conn)
+		case TypingStart:
+			// Handle typing start event
+			handleTypingNotification(userID, message, true)
+		case TypingStop:
+			// Handle typing stop event
+			handleTypingNotification(userID, message, false)
+
 		default:
 			log.Printf("Unknown message type: %s", msgType.Type)
 		}
@@ -200,4 +209,54 @@ func broadcastUserStatus(userID, username, status string) {
 		}
 	}
 	connectionsLock.Unlock()
+}
+
+func handleTypingNotification(senderID string, rawMessage []byte, isTyping bool) {
+	var msg struct {
+		ReceiverID string `json:"receiver_id"`
+	}
+	if err := json.Unmarshal(rawMessage, &msg); err != nil {
+		log.Printf("Error decoding typing notification: %v", err)
+		return
+	}
+
+	// Retrieve sender info from the database
+	sender, err := database.GetUserByID(senderID)
+	if err != nil {
+		log.Printf("Error getting sender info: %v", err)
+		return
+	}
+
+	connectionsLock.Lock()
+	defer connectionsLock.Unlock()
+
+	// Find the connection for the receiver to send the typing notification
+	for _, c := range connections {
+		if c.UserID == msg.ReceiverID {
+			status := TypingStop
+			if isTyping {
+				status = TypingStart
+			}
+
+			notification := map[string]interface{}{
+				"type":            status,
+				"sender_id":       senderID,
+				"sender_username": sender.Username,
+			}
+
+			messageJSON, err := json.Marshal(notification)
+			if err != nil {
+				log.Printf("Error marshaling typing notification: %v", err)
+				return
+			}
+
+			err = c.Conn.WriteMessage(websocket.TextMessage, messageJSON)
+			if err != nil {
+				log.Printf("Error sending typing notification: %v", err)
+			} else {
+				log.Printf("Typing notification sent to user %s", msg.ReceiverID)
+			}
+			break
+		}
+	}
 }

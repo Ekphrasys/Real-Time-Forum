@@ -49,16 +49,13 @@ export function getUnreadNotifications() {
 // Met à jour le badge de notification
 export function updateNotificationBadge() {
   const badge = document.querySelector(".notification-badge");
-  console.log("Badge element:", badge);
   const count = unreadNotifications.length;
-  console.log("Notification count:", count);
 
   if (badge) {
     if (count > 0) {
       badge.textContent = count;
       // Utilise le style inline au lieu de className
       badge.style.display = "flex";
-      console.log("Badge should be visible now");
     } else {
       badge.style.display = "none";
     }
@@ -72,11 +69,9 @@ export function initNotifications() {
 
   // Gestionnaire de clic sur le bouton de notification
   const btn = document.getElementById("notification-button");
-  console.log("Notification button found:", btn);
   if (btn) {
     btn.addEventListener("click", function (event) {
       event.preventDefault();
-      console.log("Notification button clicked");
       toggleNotificationPanel();
     });
   } else {

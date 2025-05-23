@@ -32,6 +32,7 @@ import {
   closeChat,
   initChat,
   currentChatPartner,
+  showTypingIndicator,
 } from "./chat.js";
 
 window.onload = function () {
@@ -136,6 +137,8 @@ export function initializeWebSocket() {
     };
 
     socket.onmessage = function (event) {
+      console.log("Raw WebSocket message:", event.data);
+
       const message = JSON.parse(event.data);
 
       switch (message.type) {
@@ -152,6 +155,33 @@ export function initializeWebSocket() {
           // Après un changement de statut, actualiser la liste complète
           loadAllUsers();
           break;
+
+        case "typing_start":
+          console.log("Typing start received", message);
+          if (message.sender_id !== getCurrentUser()?.user_id) {
+            const sender = getCachedUsers().find(
+              (u) => u.user_id === message.sender_id
+            );
+            console.log("Sender found:", sender);
+            showTypingIndicator(true, sender?.username || "Someone");
+
+            // Reset existing timeout if any
+            if (window.typingStopTimeout)
+              clearTimeout(window.typingStopTimeout);
+
+            // Set timeout to hide after 1,5 seconds
+            window.typingStopTimeout = setTimeout(() => {
+              showTypingIndicator(false);
+            }, 1500);
+          }
+          break;
+
+        case "typing_stop":
+          console.log("Typing stop received", message);
+          showTypingIndicator(false);
+          if (window.typingStopTimeout) clearTimeout(window.typingStopTimeout);
+          break;
+
         case "private_message":
           console.log("DEBUG: Message privé reçu:", message);
           console.log("DEBUG: Utilisateur actuel:", getCurrentUser());
