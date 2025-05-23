@@ -52,8 +52,9 @@ export function loadPosts() {
               <span>Posted: ${new Date(
                     post.creation_date
                 ).toLocaleString()}</span>
+                <button class="view-comments-btn">View Comments</button>
             </div>
-            <button class="view-comments-btn">View Comments</button>
+
           `;
 
                 // Add click handler for the entire post

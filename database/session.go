@@ -4,6 +4,7 @@ import (
 	"time"
 )
 
+// saves a session in the database
 func SaveSession(sessionID, userID string, duration time.Duration) error {
 	_, err := DB.Exec(
 		"INSERT INTO session(session_id, user_id, created_at, expires_at) VALUES(?, ?, ?, ?)",
@@ -11,6 +12,7 @@ func SaveSession(sessionID, userID string, duration time.Duration) error {
 	return err
 }
 
+// retrieves a session from the database
 func GetUserIDFromSession(sessionID string) (string, error) {
 	var userID string
 	err := DB.QueryRow("SELECT user_id FROM session WHERE session_id = ? AND expires_at > ?",
@@ -18,6 +20,7 @@ func GetUserIDFromSession(sessionID string) (string, error) {
 	return userID, err
 }
 
+// deletes a session from the database
 func DeleteSession(sessionID string) error {
 	_, err := DB.Exec("DELETE FROM session WHERE session_id = ?", sessionID)
 	return err

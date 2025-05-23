@@ -41,7 +41,10 @@ func GetAllPosts(db *sql.DB) ([]models.Post, error) {
 	}
 	defer rows.Close()
 
+	// Create a slice to hold the posts
 	var posts []models.Post
+
+	// Iterate through the rows and scan the data into the Post struct
 	for rows.Next() {
 		var post models.Post
 		err := rows.Scan(
@@ -62,7 +65,7 @@ func GetAllPosts(db *sql.DB) ([]models.Post, error) {
 	return posts, nil
 }
 
-// GetPostByID retrieves a post by its ID
+// GetPostByID retrieves a certain post by its ID
 func GetPostByID(db *sql.DB, id string) (*models.Post, error) {
 	query := `
 	SELECT id, title, content, user_id, creation_date

@@ -3,15 +3,11 @@ package database
 import (
 	"Real-Time-Forum/models"
 	"fmt"
-	"log"
 )
 
 // GetUserByID retrieves a user by their ID
 func GetUserByID(userID string) (*models.User, error) {
 	var user models.User
-
-	// Debug output
-	fmt.Println("Getting user with ID:", userID)
 
 	// Query the database for the user with the given ID
 	err := DB.QueryRow(`
@@ -34,10 +30,9 @@ func GetUserByID(userID string) (*models.User, error) {
 		return nil, err
 	}
 
-	// Don't return the password
+	// Don't return the password (security)
 	user.Password = ""
 
-	fmt.Printf("Found user: %+v\n", user)
 	return &user, nil
 }
 
@@ -83,6 +78,7 @@ func GetAllUsers() ([]models.User, error) {
 	return users, nil
 }
 
+// Retrieves all users who are currently online
 func GetOnlineUsers() ([]models.User, error) {
 	var onlineUsers []models.User
 
@@ -98,7 +94,6 @@ func GetOnlineUsers() ([]models.User, error) {
 	}
 	defer rows.Close()
 
-	// Parcourir les résultats
 	for rows.Next() {
 		var user models.User
 		err := rows.Scan(
@@ -124,11 +119,10 @@ func GetOnlineUsers() ([]models.User, error) {
 	return onlineUsers, nil
 }
 
+// retrieves all users ordered by the last message sent or received (sort like discord)
 func GetUsersOrderedByLastMessage(currentUserID string) ([]map[string]interface{}, error) {
-	// Utilisons un format de log plus visible
-	log.Printf("--- Démarrage GetUsersOrderedByLastMessage pour l'utilisateur: %s ---", currentUserID)
 
-	// Requête corrigée
+	// Sorting is done by the last message sent or received
 	query := `
 		WITH LastMessageInfo AS (
 			SELECT 
@@ -175,13 +169,9 @@ func GetUsersOrderedByLastMessage(currentUserID string) ([]map[string]interface{
 			rm.sent_at DESC,
 			u.username ASC`
 
-	// Débogage de la requête
-	log.Println("Exécution de la requête...")
-
 	rows, err := DB.Query(query, currentUserID, currentUserID, currentUserID, currentUserID, currentUserID)
 	if err != nil {
-		log.Printf("ERREUR de requête: %v", err)
-		return nil, fmt.Errorf("échec de la requête pour les utilisateurs triés par dernier message: %w", err)
+		return nil, fmt.Errorf("query failed: %w", err)
 	}
 	defer rows.Close()
 
@@ -207,8 +197,7 @@ func GetUsersOrderedByLastMessage(currentUserID string) ([]map[string]interface{
 			&sortTime,
 		)
 		if err != nil {
-			log.Printf("ERREUR de scan: %v", err)
-			return nil, fmt.Errorf("échec du scan d'une ligne utilisateur: %w", err)
+			return nil, fmt.Errorf("Scan failed: %w", err)
 		}
 
 		userCount++
@@ -229,11 +218,8 @@ func GetUsersOrderedByLastMessage(currentUserID string) ([]map[string]interface{
 	}
 
 	if err = rows.Err(); err != nil {
-		log.Printf("ERREUR après itération: %v", err)
-		return nil, fmt.Errorf("erreur après itération des lignes: %w", err)
+		return nil, fmt.Errorf("error after iterating rows: %w", err)
 	}
-
-	log.Printf("--- Terminé GetUsersOrderedByLastMessage: %d utilisateurs trouvés ---", userCount)
 
 	return users, nil
 }

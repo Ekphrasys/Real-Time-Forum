@@ -57,6 +57,7 @@ func RegisterUser(user models.User) error {
 	return nil
 }
 
+// checks if username already exists
 func FindUsername(username string) (bool, error) {
 	query := "SELECT username FROM User WHERE username=?"
 	row := DB.QueryRow(query, username)
@@ -72,8 +73,8 @@ func FindUsername(username string) (bool, error) {
 	return false, nil // Username exists
 }
 
+// checks if email already exists
 func FindEmailUser(email string) (bool, error) {
-	// Check if email exists
 	query := "SELECT email FROM User WHERE email=?"
 	row := DB.QueryRow(query, email)
 	var foundEmail string
