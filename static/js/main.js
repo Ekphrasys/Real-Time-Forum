@@ -177,7 +177,6 @@ export function initializeWebSocket() {
           break;
 
         case "typing_stop":
-          console.log("Typing stop received", message);
           showTypingIndicator(false);
           if (window.typingStopTimeout) clearTimeout(window.typingStopTimeout);
           break;
