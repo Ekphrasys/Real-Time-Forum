@@ -112,6 +112,28 @@ p {
   border: 5px dashed #FFEB3B;
 }
 
+.post {
+  border-bottom: 3px dashed #FFC107;
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+}
+
+.post p {
+ color: #FF5722;
+  font-size: 1.2em;
+  padding-top: 20px;
+  text-align: left;
+  margin-bottom: 30px;
+  width: auto;
+  display: block;
+}
+
+.post:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
 .create-post {
   flex: 1;
   background-color: white;
@@ -521,20 +543,15 @@ form:hover::before {
 /* post details styles */
 
 .post-detail-container {
-  margin-top: 50px;
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+ margin: 20px auto;
   background-color: white;
   padding: 30px;
   font-family: 'Comic Sans MS', 'Chicken Scratch', cursive;
   border-radius: 50px 50px 50px 0;
   box-shadow: 10px 10px 0 #FF9800;
   border: 5px dashed #FFEB3B;
-  z-index: 1001;
   width: 80%;
-  overflow-y: auto;
+  max-width: 1200px;
 }
 
 .post-detail-container p {

@@ -37,6 +37,7 @@ type Comment struct {
 type PostWithComments struct {
 	Post     Post      `json:"post"`
 	Comments []Comment `json:"comments"`
+	Username string    `json:"username"`
 }
 
 type Message struct {

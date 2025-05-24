@@ -20,6 +20,7 @@ const (
 	OnlineUsersList  = "online_users"
 	TypingStart      = "typing_start"
 	TypingStop       = "typing_stop"
+	NewPost          = "new_post"
 )
 
 // Upgrader to handle WebSocket connections

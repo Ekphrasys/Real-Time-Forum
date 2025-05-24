@@ -9,56 +9,60 @@ import (
 )
 
 // CreatePost inserts a new post into the database
-func CreatePost(post models.Post) error {
+func CreatePost(post models.Post) (*models.Post, error) {
 	uuidObj := shared.GenerateUUID()
 	post.Id = shared.ParseUUID(uuidObj) // Convert to string format
 	post.CreationDate = time.Now()
 
-	// Insert the user into the database
-	_, err := DB.Exec(
+	// Insert the post into the database
+	result, err := DB.Exec(
 		`INSERT INTO Post (post_id, title, content, category, user_id, creation_date) 
-        VALUES (?, ?, ?, ?, ?, ?)`,
+		VALUES (?, ?, ?, ?, ?, ?)`,
 		post.Id, post.Title, post.Content, post.Category, post.UserId, post.CreationDate,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to insert post into database: %w", err)
+		return nil, fmt.Errorf("failed to insert post into database: %w", err)
 	}
-	return nil
+
+	_, _ = result.RowsAffected()
+
+	return &post, nil
 }
 
 // GetAllPosts retrieves all posts from the database
 func GetAllPosts(db *sql.DB) ([]models.Post, error) {
 
 	query := `
-    SELECT p.post_id, p.user_id, u.username, p.title, p.content, p.category, p.creation_date
-    FROM Post p
-    JOIN User u ON p.user_id = u.user_id
-    ORDER BY p.creation_date DESC
-    `
+	SELECT p.post_id, p.user_id, p.title, p.content, p.category, p.creation_date, u.username
+	FROM Post p
+	JOIN User u ON p.user_id = u.user_id
+	ORDER BY p.creation_date DESC
+	`
+
 	rows, err := db.Query(query)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	// Create a slice to hold the posts
 	var posts []models.Post
 
-	// Iterate through the rows and scan the data into the Post struct
 	for rows.Next() {
 		var post models.Post
+		var username string
 		err := rows.Scan(
 			&post.Id,
 			&post.UserId,
-			&post.Username,
 			&post.Title,
 			&post.Content,
 			&post.Category,
 			&post.CreationDate,
+			&username,
 		)
 		if err != nil {
 			return nil, err
 		}
+		post.Username = username // Assign the username to the post
 		posts = append(posts, post)
 	}
 
@@ -68,35 +72,40 @@ func GetAllPosts(db *sql.DB) ([]models.Post, error) {
 // GetPostByID retrieves a certain post by its ID
 func GetPostByID(db *sql.DB, id string) (*models.Post, error) {
 	query := `
-	SELECT id, title, content, user_id, creation_date
-	FROM posts
-	WHERE id = ?
+	SELECT p.post_id, p.title, p.content, p.user_id, p.category, p.creation_date, u.username
+	FROM Post p
+	JOIN User u ON p.user_id = u.user_id
+	WHERE p.post_id = ?
 	`
+
 	row := db.QueryRow(query, id)
 
 	var post models.Post
+	var username string
 	err := row.Scan(
 		&post.Id,
 		&post.Title,
 		&post.Content,
 		&post.UserId,
+		&post.Category,
 		&post.CreationDate,
+		&username,
 	)
 	if err != nil {
 		return nil, err
 	}
-
 	return &post, nil
 }
 
 // GetPostsByUser retrieves all posts by a specific user
 func GetPostsByUser(db *sql.DB, userID string) ([]models.Post, error) {
 	query := `
-	SELECT id, title, content, user_id, creation_date
-	FROM posts
+	SELECT p.post_id, p.title, p.content, p.user_id, p.category, p.creation_date
+	FROM Post p
 	WHERE user_id = ?
 	ORDER BY creation_date DESC
 	`
+
 	rows, err := db.Query(query, userID)
 	if err != nil {
 		return nil, err
@@ -111,6 +120,7 @@ func GetPostsByUser(db *sql.DB, userID string) ([]models.Post, error) {
 			&post.Title,
 			&post.Content,
 			&post.UserId,
+			&post.Category,
 			&post.CreationDate,
 		)
 		if err != nil {
@@ -118,42 +128,46 @@ func GetPostsByUser(db *sql.DB, userID string) ([]models.Post, error) {
 		}
 		posts = append(posts, post)
 	}
-
 	return posts, nil
 }
 
 // GetPostWithComments retrieves a post and all its comments
 func GetPostWithComments(postID string) (*models.PostWithComments, error) {
-	// Get the post first
 	var post models.Post
-	err := DB.QueryRow(`
-        SELECT p.post_id, p.title, p.content, p.category, p.user_id, u.username, p.creation_date
-        FROM Post p
-        JOIN User u ON p.user_id = u.user_id
-        WHERE p.post_id = ?
-    `, postID).Scan(
+	var postUsername string
+
+	postQuery := `
+		SELECT p.post_id, p.title, p.content, p.user_id, p.category, p.creation_date, u.username
+		FROM Post p
+		JOIN User u ON p.user_id = u.user_id
+		WHERE p.post_id = ?
+	`
+
+	err := DB.QueryRow(postQuery, postID).Scan(
 		&post.Id,
 		&post.Title,
 		&post.Content,
-		&post.Category,
 		&post.UserId,
-		&post.Username,
+		&post.Category,
 		&post.CreationDate,
+		&postUsername,
 	)
 
 	if err != nil {
 		return nil, err
 	}
 
-	// Get all comments for this post
-	rows, err := DB.Query(`
-        SELECT c.comment_id, c.content, c.user_id, u.username, c.creation_date
-        FROM Comment c
-        JOIN User u ON c.user_id = u.user_id
-        WHERE c.post_id = ?
-        ORDER BY c.creation_date ASC
-    `, postID)
+	post.Username = postUsername
 
+	commentsQuery := `
+		SELECT c.comment_id, c.content, c.user_id, c.creation_date, u.username
+		FROM Comment c
+		JOIN User u ON c.user_id = u.user_id
+		WHERE c.post_id = ?
+		ORDER BY c.creation_date ASC
+	`
+
+	rows, err := DB.Query(commentsQuery, postID)
 	if err != nil {
 		return nil, err
 	}
@@ -162,35 +176,45 @@ func GetPostWithComments(postID string) (*models.PostWithComments, error) {
 	var comments []models.Comment
 	for rows.Next() {
 		var comment models.Comment
+		var commentUsername string
 		err := rows.Scan(
 			&comment.Id,
 			&comment.Content,
 			&comment.UserId,
-			&comment.Username,
 			&comment.CreationDate,
+			&commentUsername,
 		)
 		if err != nil {
 			continue
 		}
 		comment.PostId = postID
+		comment.Username = commentUsername // Assign the username to the comment
 		comments = append(comments, comment)
 	}
-
-	return &models.PostWithComments{
+	result := &models.PostWithComments{
 		Post:     post,
 		Comments: comments,
-	}, nil
+	}
+	return result, nil
 }
 
 // CreateComment adds a new comment to a post
 func CreateComment(comment models.Comment) error {
+
 	comment.Id = shared.ParseUUID(shared.GenerateUUID())
 	comment.CreationDate = time.Now()
 
-	_, err := DB.Exec(
+	result, err := DB.Exec(
 		`INSERT INTO Comment (comment_id, post_id, user_id, content, creation_date) 
-         VALUES (?, ?, ?, ?, ?)`,
+		 VALUES (?, ?, ?, ?, ?)`,
 		comment.Id, comment.PostId, comment.UserId, comment.Content, comment.CreationDate,
 	)
-	return err
+
+	if err != nil {
+		return err
+	}
+
+	_, _ = result.RowsAffected()
+
+	return nil
 }

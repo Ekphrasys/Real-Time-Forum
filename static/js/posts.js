@@ -7,6 +7,7 @@ export function loadPosts() {
             return response.json();
         })
         .then((posts) => {
+            console.log("Posts data:", posts);
             const postsContainer = document.querySelector(".posts");
 
             if (!postsContainer) {
@@ -41,7 +42,7 @@ export function loadPosts() {
 
                 const postElement = document.createElement("div");
                 postElement.className = "post";
-                postElement.style.cursor = "pointer"; // Make it look clickable
+                // postElement.style.cursor = "pointer"; // Make it look clickable
 
                 postElement.innerHTML = `
             <h4>${post.username || "Anonymous"}</h4>
@@ -57,15 +58,6 @@ export function loadPosts() {
             </div>
 
           `;
-
-                // Add click handler for the entire post
-                postElement.addEventListener("click", function (e) {
-                    // Ignore clicks on buttons or links to prevent navigation conflicts
-                    if (e.target.tagName === "BUTTON" || e.target.tagName === "A") {
-                        return;
-                    }
-                    viewPost(post.post_id);
-                });
 
                 // Add specific click handler for the comments button
                 const commentsBtn = postElement.querySelector(".view-comments-btn");
@@ -135,16 +127,28 @@ export function setupPostForm() {
                 if (postsContainer) {
                     const postElement = document.createElement("div");
                     postElement.className = "post";
+                    const currentUser = window.currentUser;
+
                     postElement.innerHTML = `
-              <h4>${newPost.username || "you"}</h4>
+              <h4>${currentUser?.username}</h4>
               <h3>${newPost.title}</h3>
               <p>${newPost.content}</p>
               <div class="post-meta">
                 <span>Category: ${newPost.category}</span>
                 <br>
-                <span>Just now</span>
+                <span>Posted: ${new Date(
+                    newPost.creation_date
+                ).toLocaleString()}</span>
+                 <button class="view-comments-btn">View Post Details</button>
               </div>
             `;
+
+            const DetailsBtn = postElement.querySelector(".view-comments-btn");
+                    if (DetailsBtn) {
+                        DetailsBtn.addEventListener("click", function (e) {
+                            viewPost(newPost.post_id);
+                        });
+                    }
 
                     // Add to the beginning of the posts container
                     postsContainer.insertBefore(postElement, postsContainer.firstChild);
