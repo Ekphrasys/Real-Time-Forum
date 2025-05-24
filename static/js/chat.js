@@ -88,10 +88,25 @@ export function displayMessage(msg) {
   const timestamp = new Date(msg.timestamp || msg.sent_at);
   const formattedDateTime = `${timestamp.toLocaleDateString()} ${timestamp.toLocaleTimeString()}`;
 
+   // Récupérer le nom de l'expéditeur
+  let senderName = "Unknown";
+  if (msg.sender) {
+    senderName = msg.sender.username || "Unknown";
+  } else if (isSentByMe) {
+    const currentUser = getCurrentUser();
+    senderName = currentUser?.username || "You";
+  } else {
+    const sender = cachedUsers.find(u => String(u.user_id) === String(msg.sender_id));
+    senderName = sender?.username || currentChatPartner?.username || "Unknown";
+  }
+
   messageElement.innerHTML = `
-          <div class="message-content">${msg.content}</div>
-          <div class="message-time">${formattedDateTime}</div>
-      `;
+  <div class="message-content">${msg.content}</div>
+        <div class="message-footer">
+          <span class="message-sender">${senderName}</span>
+          <span class="message-time">${formattedDateTime}</span>
+        </div>
+    `;
   chatDiv.appendChild(messageElement);
   chatDiv.scrollTop = chatDiv.scrollHeight;
 }
@@ -225,10 +240,31 @@ function createMessageElement(msg) {
     timeString = "Unknown time";
   }
 
+    // Récupérer le nom de l'expéditeur
+  let senderName = "Unknown";
+  if (msg.sender) {
+    // Si l'objet sender est inclus dans le message
+    senderName = msg.sender.username || "Unknown";
+  } else if (isSentByMe) {
+    // Si c'est l'utilisateur actuel
+    const currentUser = getCurrentUser();
+    senderName = currentUser?.username || "You";
+  } else {
+    // Chercher dans les utilisateurs en cache
+    const sender = cachedUsers.find(u => String(u.user_id) === String(msg.sender_id));
+    senderName = sender?.username || currentChatPartner?.username || "Unknown";
+  }
+
+
   messageElement.innerHTML = `
-        <div class="message-content">${msg.content}</div>
-        <div class="message-time">${timeString}</div>
+  <div class="message-content">${msg.content}</div>
+        <div class="message-footer">
+          <span class="message-sender">${senderName}</span>
+          <span class="message-time">${timeString}</span>
+        </div>
     `;
+
+
   return messageElement;
 }
 
