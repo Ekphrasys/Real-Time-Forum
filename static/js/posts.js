@@ -49,10 +49,11 @@ export function loadPosts() {
             <p>${post.content}</p>
             <div class="post-meta">
               <span>Category: ${post.category || "General"}</span>
+              <br>
               <span>Posted: ${new Date(
                     post.creation_date
                 ).toLocaleString()}</span>
-                <button class="view-comments-btn">View Comments</button>
+                <button class="view-comments-btn">View Post Details</button>
             </div>
 
           `;
@@ -135,11 +136,12 @@ export function setupPostForm() {
                     const postElement = document.createElement("div");
                     postElement.className = "post";
                     postElement.innerHTML = `
-              <h4>${newPost.username || "You"}</h4>
+              <h4>${newPost.username || "you"}</h4>
               <h3>${newPost.title}</h3>
               <p>${newPost.content}</p>
               <div class="post-meta">
                 <span>Category: ${newPost.category}</span>
+                <br>
                 <span>Just now</span>
               </div>
             `;
@@ -192,7 +194,9 @@ export function displayPostDetails(post) {
       <h2>${post.title}</h2>
       <div class="post-meta">
         <span>By: ${post.username || "Anonymous"}</span>
+        <br>
         <span>Category: ${post.category || "General"}</span>
+        <br>
         <span>Posted: ${new Date(post.creation_date).toLocaleString()}</span>
       </div>
       <div class="post-body">

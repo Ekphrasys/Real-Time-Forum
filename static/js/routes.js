@@ -62,7 +62,8 @@ export const routes = {
             </div>
       </header>
    
-        <div class="main-content">
+      <div class="main-content">
+       <div class="top-row">
         <div class="users-container">
               <div class="user-list-toggle">
                 <h3 id="show-all-users">All Users</h3>
@@ -72,7 +73,7 @@ export const routes = {
             </ul>
         </div>
 
-        <div class="posts-container">
+        
           <div class="create-post">
             <h3>Create a new post</h3>
             <input type="text" id="post-title" placeholder="Enter title..." required>
@@ -84,13 +85,15 @@ export const routes = {
             <textarea placeholder="What's on your mind?" rows="3"></textarea>
             <button type="button">Post</button>
           </div>
+          </div>
             
-            <h2>Recent Posts</h2>
+          <div class="posts-container">
             <div class="posts">
+              <h2>Recent Posts</h2>
                 <!-- Posts will be loaded here -->
             </div>
-        </div>
-    </div>
+          </div>
+      </div>
 
     <!-- Hidden chat by default -->
          <div id="chat-modal">

@@ -103,7 +103,8 @@ func main() {
 	// Start the graceful shutdown process in a separate goroutine.
 	go gracefulShutdown(server)
 
-	fmt.Println("Server started on port\nAccess link : http://localhost:8080/", server.Addr)
+	fmt.Println("Server started on port", server.Addr)
+	fmt.Println("Access link : http://localhost:8080/")
 	// Start the HTTP server and listen for incoming requests.
 	err := server.ListenAndServe()
 	if err != nil && err != http.ErrServerClosed {
