@@ -1,13 +1,12 @@
 import { routes } from "./routes.js";
 
-// Function to load and display posts
+// Get the posts list from the server and display them
 export function loadPosts() {
     fetch("/posts", { method: "GET", credentials: "include" })
         .then((response) => {
             return response.json();
         })
         .then((posts) => {
-            console.log("Posts data:", posts);
             const postsContainer = document.querySelector(".posts");
 
             if (!postsContainer) {
@@ -18,6 +17,7 @@ export function loadPosts() {
             // Clear existing posts
             postsContainer.innerHTML = "";
 
+            // If no posts are found, display a message
             if (posts.length === 0) {
                 postsContainer.innerHTML = "<p>No posts yet. Be the first to post!</p>";
                 return;
@@ -40,43 +40,42 @@ export function loadPosts() {
                     console.error("Date parsing error:", e);
                 }
 
+                // Create a new post element
                 const postElement = document.createElement("div");
                 postElement.className = "post";
-                // postElement.style.cursor = "pointer"; // Make it look clickable
 
                 postElement.innerHTML = `
-            <h4>${post.username || "Anonymous"}</h4>
-            <h3>${post.title || ""}</h3>
-            <p>${post.content}</p>
-            <div class="post-meta">
-              <span>Category: ${post.category || "General"}</span>
-              <br>
-              <span>Posted: ${new Date(
+                    <h4>${post.username || "Anonymous"}</h4>
+                    <h3>${post.title || ""}</h3>
+                        <p>${post.content}</p>
+                    <div class="post-meta">
+                        <span>Category: ${post.category || "General"}</span>
+                        <br>
+                        <span>Posted: ${new Date(
                     post.creation_date
                 ).toLocaleString()}</span>
-                <button class="view-comments-btn">View Post Details</button>
-            </div>
-
-          `;
+                        <button class="view-comments-btn">View Post Details</button>
+                    </div>
+                `;
 
                 // Add specific click handler for the comments button
                 const commentsBtn = postElement.querySelector(".view-comments-btn");
                 if (commentsBtn) {
                     commentsBtn.addEventListener("click", function (e) {
-                        e.stopPropagation(); // Prevent triggering the post click event
                         viewPost(post.post_id);
                     });
                 }
 
+                // Append the post element to the posts container
                 postsContainer.appendChild(postElement);
             });
         })
         .catch((error) => console.error("Error loading posts:", error));
 }
 
-// Simplified function to handle post creation
+// Function to handle post creation
 export function setupPostForm() {
-    // Get the elements
+    // Get the elements from the creation form
     const titleInput = document.getElementById("post-title");
     const categorySelect = document.getElementById("post-category");
     const textarea = document.querySelector(".create-post textarea");
@@ -130,20 +129,20 @@ export function setupPostForm() {
                     const currentUser = window.currentUser;
 
                     postElement.innerHTML = `
-              <h4>${currentUser?.username}</h4>
-              <h3>${newPost.title}</h3>
-              <p>${newPost.content}</p>
-              <div class="post-meta">
-                <span>Category: ${newPost.category}</span>
-                <br>
-                <span>Posted: ${new Date(
-                    newPost.creation_date
-                ).toLocaleString()}</span>
-                 <button class="view-comments-btn">View Post Details</button>
-              </div>
-            `;
+                        <h4>${currentUser?.username}</h4>
+                        <h3>${newPost.title}</h3>
+                        <p>${newPost.content}</p>
+                        <div class="post-meta">
+                            <span>Category: ${newPost.category}</span>
+                            <br>
+                            <span>Posted: ${new Date(
+                        newPost.creation_date
+                    ).toLocaleString()}</span>
+                            <button class="view-comments-btn">View Post Details</button>
+                        </div>
+                    `;
 
-            const DetailsBtn = postElement.querySelector(".view-comments-btn");
+                    const DetailsBtn = postElement.querySelector(".view-comments-btn");
                     if (DetailsBtn) {
                         DetailsBtn.addEventListener("click", function (e) {
                             viewPost(newPost.post_id);
@@ -192,7 +191,7 @@ export function loadPostDetails(postId) {
 // Function to display post details
 export function displayPostDetails(post) {
     const container = document.getElementById("post-content");
-    if (!container) return;
+    if (!container) return; // If the container is not found, exit
 
     container.innerHTML = `
       <h2>${post.title}</h2>
@@ -219,6 +218,7 @@ export function displayComments(comments) {
         return;
     }
 
+    // For each comment, create a new HTML structure
     let html = "";
     comments.forEach((comment) => {
         html += `
@@ -236,6 +236,7 @@ export function displayComments(comments) {
       `;
     });
 
+    // Set the inner HTML of the comments container
     container.innerHTML = html;
 }
 
@@ -247,7 +248,7 @@ export function setupCommentForm(postId) {
     if (!submitButton || !contentInput) return;
 
     submitButton.addEventListener("click", () => {
-        const content = contentInput.value.trim();
+        const content = contentInput.value.trim(); // Get the content from the input field, trim whitespace to ensure it's not empty
         if (!content) {
             alert("Comment cannot be empty");
             return;

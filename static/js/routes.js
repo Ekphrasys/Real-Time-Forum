@@ -1,6 +1,8 @@
 import { getCurrentUser } from "./users.js";
 
-import { addNotification, initNotifications } from "./notifications.js";
+// Defines the HTML templates for the main routes of the Real-Time Forum web application.
+// Each route is represented as a function that returns a string of HTML markup for rendering
+// the corresponding page (register, login, home, post detail)
 
 export const routes = {
   register: function () {
@@ -88,8 +90,8 @@ export const routes = {
           </div>
             
           <div class="posts-container">
+            <h2>Recent Posts</h2>
             <div class="posts">
-              <h2>Recent Posts</h2>
                 <!-- Posts will be loaded here -->
             </div>
           </div>

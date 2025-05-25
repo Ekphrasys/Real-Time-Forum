@@ -6,8 +6,9 @@ export function attachRegisterEventListener() {
   const form = document.getElementById("registerForm");
 
   form.addEventListener("submit", async function (event) {
-    event.preventDefault();
+    event.preventDefault(); // Prevent default behaviour to let the JS handle the form submission
 
+    // Collect form data
     const formData = {
       username: document.getElementById("username").value,
       age: parseInt(document.getElementById("age").value),
@@ -18,14 +19,16 @@ export function attachRegisterEventListener() {
       password: document.getElementById("password").value,
     };
 
+
     try {
+      // HTTP request to create a new user
       const response = await fetch("/register", {
         method: "POST",
-        body: JSON.stringify(formData),
+        body: JSON.stringify(formData), // converts the form data to JSON format
         headers: { "Content-Type": "application/json" },
       });
 
-      // Utilise la même approche que le login (cohérence)
+      // Wait for the response and converts it to JS object
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || "Registration failed");
@@ -40,9 +43,11 @@ export function attachRegisterEventListener() {
   });
 }
 
+// Function to display an error message in the form
 function displayError(message, form) {
   const errorContainer = document.getElementById("error-message");
 
+  // If the error container does not exist, create it
   if (!errorContainer) {
     const container = document.createElement("div");
     container.id = "error-message";
@@ -50,6 +55,7 @@ function displayError(message, form) {
     form.insertBefore(container, form.firstChild);
   }
 
+  // Set the error message and display it
   const errorElement = document.getElementById("error-message");
   errorElement.textContent = message;
   errorElement.style.display = "block";
@@ -58,7 +64,6 @@ function displayError(message, form) {
 // Function to attach the event to the login form
 export function attachLoginEventListener() {
   const form = document.getElementById("loginForm");
-  const errorMessage = document.getElementById("errorMessage");
 
   form.addEventListener("submit", async function (event) {
     event.preventDefault();
@@ -76,7 +81,7 @@ export function attachLoginEventListener() {
           identifier: identifier,
           password: password,
         }),
-        credentials: "include",
+        credentials: "include", // Include cookies in the request
       });
 
       const userData = await response.json();
@@ -84,21 +89,20 @@ export function attachLoginEventListener() {
         throw new Error(userData.error || "Login failed");
       }
 
-      // Fermer l'ancien WebSocket s'il existe
+      // Close the old WebSocket connection if it exists
       if (window.websocket) {
         window.websocket.close();
         window.websocket = null;
       }
 
-      // Mettre à jour currentUser via la fonction exportée
       console.log("User data received:", userData);
-      // Mettre à jour aussi window.currentUser pour compatibilité
+      // Update the global currentUser variable
       window.currentUser = userData;
-      // Utiliser la fonction dédiée pour mettre à jour currentUser
+      // Update the current user state in the application
       setCurrentUser(userData);
       
       console.log("User data updated, calling navigation");
-      // Attendre que les données soient bien mises à jour
+      // AWait a short timeout to ensure the DOM is updated
       setTimeout(() => {
         document.getElementById("logout-button");
         initializeWebSocket();
@@ -112,7 +116,7 @@ export function attachLoginEventListener() {
 }
 
 export function logout() {
-  // Fermer le WebSocket s'il existe
+  // Close the WebSocket connection if it exists
   if (window.websocket) {
     window.websocket.close();
     window.websocket = null;
@@ -121,10 +125,10 @@ export function logout() {
   fetch("/logout", { method: "POST", credentials: "include" })
     .then((response) => response.json())
     .then(() => {
-      // Mettre à jour les données utilisateur
+      // Update the current user state
       window.currentUser = null;
       setCurrentUser(null);
-      
+      // redirect to the login page
       navigateTo("login");
     })
     .catch((error) => console.error("Logout error:", error));
