@@ -19,6 +19,7 @@ let allLoadedMessages = [];
 
 let typingTimeout;
 
+// Send private message, update UI immediately, and sync with server via WebSocket
 export function sendMessage() {
   if (!currentChatPartner || !getCurrentUser()?.user_id) return;
 
@@ -26,8 +27,9 @@ export function sendMessage() {
   const content = input.value.trim();
 
   if (content) {
-    // Optimistic UI update - update the cached users immediately
+    // Update cached users immediately without waiting for server response
     const updatedUsers = [...cachedUsers];
+    // search for the chat partner in the list
     const partnerIndex = updatedUsers.findIndex(
       (u) => u.user_id === currentChatPartner.id
     );
@@ -42,7 +44,7 @@ export function sendMessage() {
       updateUsersList(updatedUsers);
     }
 
-    // Envoyer le message via WebSocket
+    // Send the message to sever via WebSocket
     window.websocket.send(
       JSON.stringify({
         type: "private_message",
@@ -52,7 +54,7 @@ export function sendMessage() {
       })
     );
 
-    // Afficher le message localement
+    // Display the message immediately in the chat
     const newMessage = {
       sender_id: getCurrentUser().user_id,
       content: content,
@@ -63,7 +65,7 @@ export function sendMessage() {
 
     input.value = "";
 
-    // Rafraîchir la liste complète après un court délai
+    // Refresh the users list to sync with the server
     setTimeout(() => loadAllUsers(), 300);
   }
 }
@@ -72,9 +74,11 @@ export function displayMessage(msg) {
   const chatDiv = document.getElementById("chat-messages");
   if (!chatDiv) return;
 
+  // Determine if the message is sent by the current user
   const isSentByMe =
     String(msg.sender_id) === String(getCurrentUser()?.user_id);
 
+  // Create a new message element
   const messageElement = document.createElement("div");
   messageElement.className = isSentByMe ? "message sent" : "message received";
   messageElement.dataset.senderId = msg.sender_id;
@@ -88,7 +92,7 @@ export function displayMessage(msg) {
   const timestamp = new Date(msg.timestamp || msg.sent_at);
   const formattedDateTime = `${timestamp.toLocaleDateString()} ${timestamp.toLocaleTimeString()}`;
 
-   // Récupérer le nom de l'expéditeur
+   // Retrieve the sender's name
   let senderName = "Unknown";
   if (msg.sender) {
     senderName = msg.sender.username || "Unknown";
@@ -96,6 +100,7 @@ export function displayMessage(msg) {
     const currentUser = getCurrentUser();
     senderName = currentUser?.username || "You";
   } else {
+    // Checks in the cached users list to find the sender's name
     const sender = cachedUsers.find(u => String(u.user_id) === String(msg.sender_id));
     senderName = sender?.username || currentChatPartner?.username || "Unknown";
   }
@@ -111,8 +116,10 @@ export function displayMessage(msg) {
   chatDiv.scrollTop = chatDiv.scrollHeight;
 }
 
+
+// Load message history, firstly 10 messages, then load more on scroll
 export async function loadMessageHistory(userId, loadMore = false) {
-  if (isLoadingMessages) return;
+  if (isLoadingMessages) return; // prevent multiple simultaneous loads
 
   if (!loadMore) {
     // Reset everything for a new chat
@@ -129,6 +136,7 @@ export async function loadMessageHistory(userId, loadMore = false) {
 
   isLoadingMessages = true;
 
+  // Request messages to the server by pages
   try {
     const pageSize = 10;
     const response = await fetch(
@@ -139,25 +147,27 @@ export async function loadMessageHistory(userId, loadMore = false) {
     );
     if (!response.ok) throw new Error(`Failed to load: ${response.status}`);
 
+
     const data = await response.json();
     const chatDiv = document.getElementById("chat-messages");
     if (!chatDiv) return;
 
-    // Supprimer l'indicateur de chargement uniquement au premier chargement
+    // Delete the loading indicator if it exists on the first load
     const loadingIndicator = chatDiv.querySelector(".loading-indicator");
     if (loadingIndicator && !loadMore) loadingIndicator.remove();
 
+    // Check is server returned any messages
     if (Array.isArray(data) && data.length > 0) {
-      // Sauvegarder la position de scroll actuelle
-      const wasAtBottom = loadMore ? false : true;
+      // Save the scroll height before adding new messages
       const oldScrollHeight = chatDiv.scrollHeight;
 
       if (loadMore) {
-        // Lors d'un chargement progressif, ajouter au début du tableau
+        // PROGRESSIVE LOADING
         allLoadedMessages = [...data, ...allLoadedMessages];
 
-        // Insérer les nouveaux messages en haut
+        // Insert new messages at the top of the chat
         const fragment = document.createDocumentFragment();
+        // Sort messages by timestamp before inserting
         data
           .sort((a, b) => {
             const timestampA = a.sent_at || a.timestamp;
@@ -168,20 +178,20 @@ export async function loadMessageHistory(userId, loadMore = false) {
             fragment.appendChild(createMessageElement(msg));
           });
 
-        // Insérer au début du conteneur
+        // Insert the new messages at the top of the chat
         if (chatDiv.firstChild) {
           chatDiv.insertBefore(fragment, chatDiv.firstChild);
         } else {
           chatDiv.appendChild(fragment);
         }
 
-        // Maintenir la position de défilement relative
+        // Maintain scroll position
         chatDiv.scrollTop = chatDiv.scrollHeight - oldScrollHeight;
       } else {
-        // Premier chargement
+        // FIRST LOAD (loadMore is false)
         allLoadedMessages = [...data];
 
-        // Vider le conteneur et afficher tous les messages
+        // Empty the chat and add all messages
         chatDiv.innerHTML = "";
         data
           .sort((a, b) => {
@@ -193,14 +203,14 @@ export async function loadMessageHistory(userId, loadMore = false) {
             chatDiv.appendChild(createMessageElement(msg));
           });
 
-        // Faire défiler jusqu'en bas pour le chargement initial
+        // After loading all messages, scroll to the bottom so the user sees the latest messages
         chatDiv.scrollTop = chatDiv.scrollHeight;
       }
 
       currentPage++;
       hasMoreMessages = data.length === pageSize;
     } else {
-      hasMoreMessages = false;
+      hasMoreMessages = false; // if server returned no messages, we indicate that there are no more messages to load
     }
   } catch (error) {
     console.error("Error loading messages:", error);
@@ -273,13 +283,13 @@ export function openChat(userId, username) {
 
   const id = String(userId);
 
-  // Marquer les notifications de cet utilisateur comme lues
+  // Marks messages as read when opening a chat
   markAsRead(id);
 
-  currentPage = 1;
+  currentPage = 1; // reset the chat page each time a new chat is opened
   hasMoreMessages = true;
   isLoadingMessages = false;
-  allLoadedMessages = []; // Réinitialiser les messages à l'ouverture d'un nouveau chat
+  allLoadedMessages = []; // Empty the loaded messages when opening a new chat
 
   currentChatPartner = { id: id, username: username };
 
@@ -290,8 +300,9 @@ export function openChat(userId, username) {
     partnerName.textContent = username;
     chatModal.style.display = "flex";
 
-    loadMessageHistory(id);
+    loadMessageHistory(id); // Load the message history for the chat partner
 
+    // Automaticaly put the cursor in the input field
     setTimeout(() => {
       const inputField = document.getElementById("message-input");
       if (inputField) inputField.focus();
@@ -299,6 +310,7 @@ export function openChat(userId, username) {
   }
 }
 
+// Close the chat modal and reset the chat state
 export function closeChat() {
   const chatModal = document.getElementById("chat-modal");
   if (chatModal) {
@@ -307,28 +319,33 @@ export function closeChat() {
   currentChatPartner = null;
 
   currentPage = 1;
-  hasMoreMessages = true;
+  hasMoreMessages = true; // Potentially more messages
   isLoadingMessages = false;
-  allLoadedMessages = []; // Réinitialiser les messages à la fermeture du chat
+  allLoadedMessages = [];
 }
 
+// Throttle function to limit the rate of function calls
 function throttle(func, limit) {
   let lastFunc;
   let lastRan;
   return function () {
     const context = this;
     const args = arguments;
+
+    // If the function is called for the first time or after the limit, call it and notify the last run time
     if (!lastRan) {
       func.apply(context, args);
       lastRan = Date.now();
     } else {
+      // Cancel the previous timeout if it exists
       clearTimeout(lastFunc);
+      // Set a new timeout to call the function after the limit
       lastFunc = setTimeout(function () {
         if (Date.now() - lastRan >= limit) {
           func.apply(context, args);
           lastRan = Date.now();
         }
-      }, limit - (Date.now() - lastRan));
+      }, limit - (Date.now() - lastRan)); // calculate remaining time until recall the func
     }
   };
 }
@@ -337,12 +354,15 @@ function handleScrollForLoading() {
   const chatMessages = document.getElementById("chat-messages");
   if (!chatMessages || isLoadingMessages || !hasMoreMessages) return;
 
+  // Scroll chat at 50px from the top
   if (chatMessages.scrollTop < 50) {
     loadMessageHistory(currentChatPartner.id, true);
   }
 }
 
+// Initialize chat event listeners and handlers
 export function initChat() {
+  // Open chat when clicking on a user in the users list
   document
     .querySelector(".users-list")
     ?.addEventListener("click", function (e) {
@@ -355,11 +375,13 @@ export function initChat() {
   const chatModal = document.getElementById("chat-modal");
   if (!chatModal) return;
 
+  // Send message when click button
   const sendBtn = document.getElementById("send-message-btn");
   if (sendBtn) {
     sendBtn.addEventListener("click", sendMessage);
   }
 
+  // Send message when pressing Enter
   const messageInput = document.getElementById("message-input");
   if (messageInput) {
     messageInput.addEventListener("keypress", (e) => {
@@ -370,6 +392,7 @@ export function initChat() {
 
     messageInput.addEventListener("input", handleTyping);
     messageInput.addEventListener("keydown", handleTyping);
+    // Stop typing indicator when we stop typing
     messageInput.addEventListener("blur", () => {
       if (window.websocket && currentChatPartner) {
         window.websocket.send(
@@ -382,11 +405,13 @@ export function initChat() {
     });
   }
 
+  // Close chat when clicking on the x
   const closeBtn = document.querySelector(".close-chat");
   if (closeBtn) {
     closeBtn.addEventListener("click", closeChat);
   }
 
+  // Load more messages on scroll with throttle
   const chatMessages = document.getElementById("chat-messages");
   if (chatMessages) {
     const throttledScrollHandler = throttle(handleScrollForLoading, 300);
@@ -396,7 +421,6 @@ export function initChat() {
 
 export function handleTyping() {
   if (!currentChatPartner || !window.websocket) return;
-  console.log("Sending typing_start to", currentChatPartner.id);
 
   // send typing start event to the server
   window.websocket.send(
