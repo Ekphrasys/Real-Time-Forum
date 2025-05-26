@@ -12,12 +12,10 @@ import { markAsRead } from "./notifications.js";
 
 export let currentChatPartner = null;
 
-let currentPage = 1;
-let isLoadingMessages = false;
+let currentPage = 1; // Current page for loading messages
+let isLoadingMessages = false; // Flag to prevent multiple loads
 let hasMoreMessages = true;
-let allLoadedMessages = [];
-
-let typingTimeout;
+let allLoadedMessages = []; // Array to store all loaded and displayed messages in the chat
 
 // Send private message, update UI immediately, and sync with server via WebSocket
 export function sendMessage() {

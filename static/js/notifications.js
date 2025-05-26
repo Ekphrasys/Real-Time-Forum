@@ -1,17 +1,17 @@
 import { openChat } from "./chat.js";
 
-// Stocke toutes les notifications non lues
+// Stores all unread notifications
 export let unreadNotifications = [];
 
-// Permet d'ajouter une notification
+// Allows adding a notification
 export function addNotification(senderId, senderName, message, timestamp) {
-  // Évite les doublons
+  // Avoid duplicates
   const existingIndex = unreadNotifications.findIndex(
     (n) => n.senderId === senderId
   );
 
   if (existingIndex !== -1) {
-    // Mise à jour d'une notification existante du même expéditeur
+    // Update an existing notification from the same sender
     unreadNotifications[existingIndex] = {
       senderId,
       senderName,
@@ -20,7 +20,7 @@ export function addNotification(senderId, senderName, message, timestamp) {
       read: false,
     };
   } else {
-    // Nouvelle notification
+    // New notification
     unreadNotifications.push({
       senderId,
       senderName,
@@ -33,7 +33,7 @@ export function addNotification(senderId, senderName, message, timestamp) {
   updateNotificationBadge();
 }
 
-// Marque une notification comme lue
+// Marks a notification as read
 export function markAsRead(senderId) {
   unreadNotifications = unreadNotifications.filter(
     (n) => n.senderId !== senderId
@@ -41,12 +41,12 @@ export function markAsRead(senderId) {
   updateNotificationBadge();
 }
 
-// Obtient toutes les notifications non lues
+// Gets all unread notifications
 export function getUnreadNotifications() {
   return unreadNotifications;
 }
 
-// Met à jour le badge de notification
+// Updates the notification badge
 export function updateNotificationBadge() {
   const badge = document.querySelector(".notification-badge");
   const count = unreadNotifications.length;
@@ -54,7 +54,7 @@ export function updateNotificationBadge() {
   if (badge) {
     if (count > 0) {
       badge.textContent = count;
-      // Utilise le style inline au lieu de className
+      // Use inline style instead of className
       badge.style.display = "flex";
     } else {
       badge.style.display = "none";
@@ -62,12 +62,12 @@ export function updateNotificationBadge() {
   }
 }
 
-// Initialise le système de notification
+// Initializes the notification system
 export function initNotifications() {
-  // Initialise le badge
+  // Initialize the badge
   updateNotificationBadge();
 
-  // Gestionnaire de clic sur le bouton de notification
+  // Click handler for the notification button
   const btn = document.getElementById("notification-button");
   if (btn) {
     btn.addEventListener("click", function (event) {
@@ -78,7 +78,7 @@ export function initNotifications() {
     console.log("Notification button not found in DOM"); // (Je le laisse au cas où :))
   }
 
-  // Fermer le panel de notification en cliquant ailleurs
+  // Close the notification panel when clicking elsewhere
   document.addEventListener("click", function (event) {
     const panel = document.querySelector(".notification-panel");
     const btn = document.getElementById("notification-button");
@@ -94,7 +94,7 @@ export function initNotifications() {
   });
 }
 
-// Affiche ou masque le panneau de notification
+// Shows or hides the notification panel
 export function toggleNotificationPanel() {
   const panel = document.querySelector(".notification-panel");
 
@@ -102,14 +102,14 @@ export function toggleNotificationPanel() {
     if (panel.style.display === "block") {
       panel.style.display = "none";
     } else {
-      // Mettre à jour le contenu du panneau avant de l'afficher
+      // Update the panel content before displaying it
       updateNotificationPanel();
       panel.style.display = "block";
     }
   }
 }
 
-// Met à jour le contenu du panneau de notification
+// Updates the content of the notification panel
 function updateNotificationPanel() {
   const panel = document.querySelector(".notification-panel");
 
@@ -118,7 +118,7 @@ function updateNotificationPanel() {
       panel.innerHTML =
         '<div class="empty-notification">No messages received</div>';
     } else {
-      // Trier par date (plus récente d'abord)
+      // Sort by date (most recent first)
       const sorted = [...unreadNotifications].sort(
         (a, b) => b.timestamp - a.timestamp
       );
@@ -141,21 +141,21 @@ function updateNotificationPanel() {
 
       panel.innerHTML = html;
 
-      // Ajouter les écouteurs d'événements
+      // Add event listeners
       panel.querySelectorAll(".notification-item").forEach((item) => {
         item.addEventListener("click", function () {
           const userId = this.dataset.userId;
           const username = this.querySelector("strong").textContent;
 
-          // Marquer comme lu
+          // Mark as read
           markAsRead(userId);
 
-          // Ouvrir le chat avec cet utilisateur
+          // Open chat with this user
           if (typeof openChat === "function") {
             openChat(userId, username);
           }
 
-          // Masquer le panneau
+          // Hide the panel
           panel.style.display = "none";
         });
       });

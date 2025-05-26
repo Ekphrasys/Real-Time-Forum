@@ -35,16 +35,18 @@ import {
   showTypingIndicator,
 } from "./chat.js";
 
+// Page initialization, check if user is logged in
 window.onload = function () {
   checkSession();
 };
 
+// Function to navigate to a specific page
 export function navigateTo(page) {
   if (routes[page]) {
     const content =
       typeof routes[page] === "function" ? routes[page]() : routes[page];
     document.getElementById("app").innerHTML = content;
-    history.pushState({}, page, `#${page}`);
+    history.pushState({}, page, `#${page}`); // Update URL without reloading, allow SPA behavior
   }
 
   if (page === "register") {
@@ -66,6 +68,7 @@ function checkSession() {
       if (response.ok) {
         return response.json();
       } else {
+        // Login as default if not authenticated
         navigateTo("login");
         return Promise.reject("Not authenticated");
       }
@@ -76,10 +79,12 @@ function checkSession() {
         window.websocket = null;
       }
 
+      // Update the current user in the global state
       setCurrentUser(userData);
       window.currentUser = userData;
       document.getElementById("logout-button");
 
+      // Initializa a new WebSocket connection and navigate to home
       return initializeWebSocket().then(() => {
         navigateTo("home");
       });
@@ -100,14 +105,18 @@ window.navigateTo = navigateTo;
 window.viewPost = viewPost;
 
 export function initializeWebSocket() {
+  // if already a websocket connection, close it
   if (window.websocket) {
     window.websocket.close();
     window.websocket = null;
   }
 
   return new Promise((resolve, reject) => {
+    // Create a new WebSocket connection
     const socket = new WebSocket("ws://" + window.location.host + "/ws");
 
+    // Create websocket event handlers
+    // When connection is opened, send identify user message & user status
     socket.onopen = function () {
       console.log("WebSocket connection established");
       window.websocket = socket;
@@ -128,36 +137,38 @@ export function initializeWebSocket() {
           })
         );
       }
-      resolve(socket);
+      resolve(socket); // resolve promise to indicate websocket conn is ready
     };
 
+    // Handle errors, if error occurs, log it and reject the promise
     socket.onerror = function (error) {
       console.error("WebSocket error:", error);
       reject(error);
     };
 
+    // Handle incoming messages from the server
     socket.onmessage = function (event) {
-      console.log("Raw WebSocket message:", event.data);
 
       const message = JSON.parse(event.data);
 
       switch (message.type) {
         case "online_users":
-          // Mise à jour des utilisateurs en ligne dans notre liste unifiée
-          loadAllUsers(); // Recharger tous les utilisateurs avec le statut mis à jour
+          // Update the list of online users
+          loadAllUsers(); // Reload all users to ensure the list is up-to-date
           break;
+
         case "all_users":
-          // Nouveau type de message pour tous les utilisateurs
+          // Update the complete list of users
           updateUsersList(message.users);
           break;
+
         case "user_status":
           handleUserStatusChange(message);
-          // Après un changement de statut, actualiser la liste complète
+          // After handling user status change, reload all users
           loadAllUsers();
           break;
 
         case "typing_start":
-          console.log("Typing start received", message);
           if (message.sender_id !== getCurrentUser()?.user_id) {
             const sender = getCachedUsers().find(
               (u) => u.user_id === message.sender_id
@@ -182,43 +193,35 @@ export function initializeWebSocket() {
           break;
 
         case "private_message":
-          console.log("DEBUG: Message privé reçu:", message);
-          console.log("DEBUG: Utilisateur actuel:", getCurrentUser());
-
-          // Ajouter le receiver_id si manquant
+           // If no receiver id & sender is not current user, then i'm the receiver
           if (
-            !message.receiver_id &&
-            message.sender_id !== getCurrentUser()?.user_id
+            !message.receiver_id && message.sender_id !== getCurrentUser()?.user_id
           ) {
-            // Si je ne suis pas l'expéditeur, je suis forcément le destinataire
             message.receiver_id = getCurrentUser().user_id;
-            console.log("DEBUG: Ajout du receiver_id manquant:", message);
           }
 
           if (message.receiver_id === getCurrentUser()?.user_id) {
-            console.log("DEBUG: Le message est bien pour l'utilisateur actuel");
 
-            // Obtenir les infos de l'expéditeur
+            // Get the sender in the cached users list
             const sender = getCachedUsers().find(
               (u) => u.user_id === message.sender_id
             );
             const senderName = sender ? sender.username : "Unknown user";
 
+            // Check if the current chat partner is the sender of the message
             const isCorrectConversation =
               currentChatPartner &&
-              String(message.sender_id) === String(currentChatPartner.id); // Il y avait pas les String(). Je teste un truc.
+              String(message.sender_id) === String(currentChatPartner.id);
 
+            // Display if the message is for the current chat partner & chat open
             if (isCorrectConversation) {
-              console.log("Affichage du message dans la conversation active");
               displayMessage({
                 sender_id: message.sender_id,
                 content: message.content,
                 timestamp: message.timestamp || Date.now(),
               });
             } else {
-              console.log("Création notification pour:", senderName);
-
-              // Créer une notification
+              // Create notification if chat is not open
               addNotification(
                 message.sender_id,
                 senderName,
@@ -228,29 +231,34 @@ export function initializeWebSocket() {
             }
           }
 
-          // Mise à jour optimiste de la liste des utilisateurs
-          const updatedUsers = [...getCachedUsers()];
+          const updatedUsers = [...getCachedUsers()]; // Copy cached users list without touching the original
+          // get the partner id based on whether the message is sent or received
           const partnerId = message.is_sent
             ? message.receiver_id
             : message.sender_id;
+
+          // Search for the partner index
           const partnerIndex = updatedUsers.findIndex(
             (u) => u.user_id === partnerId
           );
 
           if (partnerIndex > -1) {
-            const [partner] = updatedUsers.splice(partnerIndex, 1);
+            const [partner] = updatedUsers.splice(partnerIndex, 1); // Remove the partner from the list
+            // update the partner's last message content and timestamp
             partner.last_message_content = message.content;
             partner.last_message_timestamp = message.timestamp || Date.now();
+            // Add the updated partner to the beginning of the list
             updatedUsers.unshift(partner);
             updateCachedUsers(updatedUsers);
             updateUsersList(updatedUsers);
           }
-          // Rafraîchir la liste dans tous les cas, même pour les messages envoyés
+          // Refresh the user list with a small delay to ensure UI updates
           setTimeout(() => loadAllUsers(), 100);
           break;
       }
     };
 
+    // When connection is closed, set websocket to null
     socket.onclose = function () {
       console.log("WebSocket connection closed");
       window.websocket = null;

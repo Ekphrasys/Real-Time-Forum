@@ -24,44 +24,6 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-// Removed as it is now in websockets.go
-
-// func handleWebsocket(w http.ResponseWriter, r *http.Request) {
-// 	// Upgrade the HTTP connection to a websocket connection
-// 	conn, err := upgrader.Upgrade(w, r, nil)
-// 	if err != nil {
-// 		log.Println("Upgrade Error", err)
-// 		return
-// 	}
-// 	defer conn.Close()
-
-// 	// Websocket messages handler
-// 	for {
-// 		messageType, data, err := conn.ReadMessage()
-// 		if err != nil {
-// 			fmt.Println(err)
-// 			return
-// 		}
-// 		fmt.Println(string(data))
-// 		// Send message to the client
-// 		if err := conn.WriteMessage(messageType, data); err != nil {
-// 			fmt.Println(err)
-// 			return
-// 		}
-// 	}
-// }
-
-// func main() {
-
-// 	// Serve index.html and other static files
-// 	http.Handle("/", http.FileServer(http.Dir("./")))
-
-// 	fmt.Println("Server started at http://localhost:8080")
-// 	if err := http.ListenAndServe(":8080", nil); err != nil {
-// 		log.Fatal("ListenAndServe: ", err)
-// 	}
-// }
-
 func gracefulShutdown(apiServer *http.Server) {
 	// Create a context that listens for interrupt signals (SIGINT, SIGTERM) from the OS.
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -88,6 +50,7 @@ func main() {
 	database.InitDB()
 	defer database.DB.Close()
 
+	// Create routes for the server and add them to HTTP multiplexer
 	mux := http.NewServeMux()
 	server.SetupRoutes(mux)
 
@@ -96,19 +59,19 @@ func main() {
 
 	// Create a new HTTP server instance.
 	server := &http.Server{
-		Addr:    ":8080", // Set the server address and port.
-		Handler: mux,     // Set the request handler to the default multiplexer.
+		Addr:    ":8080", // Set the server address and port
+		Handler: mux,     // Set the request handler to the default multiplexer
 	}
 
-	// Start the graceful shutdown process in a separate goroutine.
+	// Start the graceful shutdown process in a separate goroutine
 	go gracefulShutdown(server)
 
 	fmt.Println("Server started on port", server.Addr)
 	fmt.Println("Access link : http://localhost:8080/")
-	// Start the HTTP server and listen for incoming requests.
+	// Start the HTTP server and listen for incoming requests
 	err := server.ListenAndServe()
 	if err != nil && err != http.ErrServerClosed {
-		// If the server encounters an error other than a graceful shutdown, panic and log the error.
+		// If the server encounters an error other than a graceful shutdown, panic and log the error
 		panic(fmt.Sprintf("http server error: %s", err))
 	}
 }
