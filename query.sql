@@ -31,19 +31,6 @@ CREATE TABLE IF NOT EXISTS User (
    FOREIGN KEY (user_id) REFERENCES User(user_id),
    FOREIGN KEY (post_id) REFERENCES Post(post_id)
  );
- 
- CREATE TABLE IF NOT EXISTS Category (
-   category_id CHAR(32) PRIMARY KEY,
-   name VARCHAR(50) NOT NULL UNIQUE
- );
- 
- CREATE TABLE IF NOT EXISTS Post_Category (
-   post_id CHAR(32),
-   category_id CHAR(32),
-   PRIMARY KEY (post_id, category_id),
-   FOREIGN KEY (post_id) REFERENCES Post(post_id),
-   FOREIGN KEY (category_id) REFERENCES Category(category_id)
- );
 
 CREATE TABLE IF NOT EXISTS session (
     session_id TEXT PRIMARY KEY,

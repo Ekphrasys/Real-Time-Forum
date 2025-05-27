@@ -254,8 +254,6 @@ func handleTypingNotification(senderID string, rawMessage []byte, isTyping bool)
 			err = c.Conn.WriteMessage(websocket.TextMessage, messageJSON)
 			if err != nil {
 				log.Printf("Error sending typing notification: %v", err)
-			} else {
-				log.Printf("Typing notification sent to user %s", msg.ReceiverID)
 			}
 			break
 		}
