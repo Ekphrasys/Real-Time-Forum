@@ -121,67 +121,53 @@ func GetOnlineUsers() ([]models.User, error) {
 
 // retrieves all users ordered by the last message sent or received (sort like discord)
 func GetUsersOrderedByLastMessage(currentUserID string) ([]map[string]interface{}, error) {
-
-	// Sorting is done by the last message sent or received
+	// retrieves a list of users + last message infos
+	// LEFT JOIN to include users even if no messages have been exchanged
+	// Results are grouped by user ID and ordered by the most recent message timestamp (descending), then by username (ascending)
 	query := `
-		WITH LastMessageInfo AS (
-			SELECT 
-				CASE 
-					WHEN sender_id = ? THEN receiver_id
-					WHEN receiver_id = ? THEN sender_id
-				END AS other_user_id,
-				content,
-				sender_id,
-				sent_at
-			FROM messages 
-			WHERE sender_id = ? OR receiver_id = ?
-		),
-		RankedMessages AS (
-			SELECT 
-				other_user_id,
-				content,
-				sender_id,
-				sent_at,
-				ROW_NUMBER() OVER (PARTITION BY other_user_id ORDER BY sent_at DESC) AS rn
-			FROM LastMessageInfo
-			WHERE other_user_id IS NOT NULL
-		)
-		SELECT 
-			u.user_id,
-			u.username,
-			u.email,
-			u.first_name,
-			u.last_name,
-			u.age,
-			u.gender,
-			u.creation_date,
-			COALESCE(rm.content, '') AS last_message_content,
-			COALESCE(rm.sender_id, '') AS last_message_sender,
-			COALESCE(strftime('%Y-%m-%d %H:%M:%S', rm.sent_at), '') AS sort_time
-		FROM 
-			user u
-		LEFT JOIN 
-			RankedMessages rm ON u.user_id = rm.other_user_id AND rm.rn = 1
-		WHERE 
-			u.user_id != ?
-		ORDER BY
-			CASE WHEN rm.sent_at IS NULL THEN 1 ELSE 0 END,
-			rm.sent_at DESC,
-			u.username ASC`
+        SELECT 
+            u.user_id,
+            u.username,
+            u.email,
+            u.first_name,
+            u.last_name,
+            u.age,
+            u.gender,
+            u.creation_date,
+            COALESCE(m.content, '') AS last_message_content,
+            COALESCE(m.sender_id, '') AS last_message_sender,
+            COALESCE(strftime('%Y-%m-%d %H:%M:%S', m.sent_at), '') AS last_message_time
+        FROM user u
+        LEFT JOIN (
+            SELECT 
+                CASE 
+                    WHEN sender_id = ? THEN receiver_id
+                    ELSE sender_id
+                END AS other_user_id,
+                content,
+                sender_id,
+                sent_at
+            FROM messages
+            WHERE sender_id = ? OR receiver_id = ?
+            ORDER BY sent_at DESC
+        ) m ON u.user_id = m.other_user_id
+        WHERE u.user_id != ?
+        GROUP BY u.user_id
+        ORDER BY MAX(m.sent_at) DESC, u.username ASC
+    `
 
-	rows, err := DB.Query(query, currentUserID, currentUserID, currentUserID, currentUserID, currentUserID)
+	rows, err := DB.Query(query, currentUserID, currentUserID, currentUserID, currentUserID)
 	if err != nil {
 		return nil, fmt.Errorf("query failed: %w", err)
 	}
 	defer rows.Close()
 
 	var users []map[string]interface{}
-	userCount := 0
 
 	for rows.Next() {
 		var userID, username, email, firstName, lastName, gender, creationDate string
 		var age int
-		var lastMessageContent, lastMessageSender, sortTime string
+		var lastMessageContent, lastMessageSender, lastMessageTime string
 
 		err := rows.Scan(
 			&userID,
@@ -194,13 +180,11 @@ func GetUsersOrderedByLastMessage(currentUserID string) ([]map[string]interface{
 			&creationDate,
 			&lastMessageContent,
 			&lastMessageSender,
-			&sortTime,
+			&lastMessageTime,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("Scan failed: %w", err)
 		}
-
-		userCount++
 
 		users = append(users, map[string]interface{}{
 			"user_id":             userID,
@@ -213,7 +197,7 @@ func GetUsersOrderedByLastMessage(currentUserID string) ([]map[string]interface{
 			"creation_date":       creationDate,
 			"last_message":        lastMessageContent,
 			"last_message_sender": lastMessageSender,
-			"last_message_time":   sortTime,
+			"last_message_time":   lastMessageTime,
 		})
 	}
 

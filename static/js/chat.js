@@ -222,20 +222,26 @@ export async function loadMessageHistory(userId, loadMore = false) {
   }
 }
 
+// Creates a DOM element for a chat message, with proper styling and metadata
 function createMessageElement(msg) {
+  // Determine if the message was sent by the current user
   const isSentByMe =
     String(msg.sender_id) === String(getCurrentUser()?.user_id);
+
+  // Create the message container div and set its class
   const messageElement = document.createElement("div");
   messageElement.className = isSentByMe ? "message sent" : "message received";
   messageElement.dataset.senderId = msg.sender_id;
   messageElement.dataset.messageId = msg.id;
 
+  // Set the conversation ID for the message (for grouping or reference)
   if (currentChatPartner && currentChatPartner.id) {
     messageElement.dataset.conversationId = isSentByMe
       ? `${getCurrentUser().user_id}-${currentChatPartner.id}`
       : `${msg.sender_id}-${getCurrentUser().user_id}`;
   }
 
+  // Format the message timestamp for display
   let timeString;
   try {
     const timestamp =
@@ -248,30 +254,29 @@ function createMessageElement(msg) {
     timeString = "Unknown time";
   }
 
-    // Récupérer le nom de l'expéditeur
+  // Get the sender's name
   let senderName = "Unknown";
   if (msg.sender) {
-    // Si l'objet sender est inclus dans le message
+    // If the sender object is included in the message
     senderName = msg.sender.username || "Unknown";
   } else if (isSentByMe) {
-    // Si c'est l'utilisateur actuel
+    // If the message is from the current user
     const currentUser = getCurrentUser();
     senderName = currentUser?.username || "You";
   } else {
-    // Chercher dans les utilisateurs en cache
+    // Look for the sender in the cached users list
     const sender = cachedUsers.find(u => String(u.user_id) === String(msg.sender_id));
     senderName = sender?.username || currentChatPartner?.username || "Unknown";
   }
 
-
+  // Set the inner HTML for the message content and footer (sender and time)
   messageElement.innerHTML = `
-  <div class="message-content">${msg.content}</div>
-        <div class="message-footer">
-          <span class="message-sender">${senderName}</span>
-          <span class="message-time">${timeString}</span>
-        </div>
-    `;
-
+    <div class="message-content">${msg.content}</div>
+    <div class="message-footer">
+      <span class="message-sender">${senderName}</span>
+      <span class="message-time">${timeString}</span>
+    </div>
+  `;
 
   return messageElement;
 }
