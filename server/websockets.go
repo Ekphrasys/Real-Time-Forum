@@ -32,6 +32,16 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
+// Define a Connection struct
+type Connection struct {
+	UserID string
+	Conn   *websocket.Conn
+}
+
+// Create a slice to store connections instead of a map
+var connections []Connection
+var connectionsLock sync.Mutex
+
 // HandleWebsocket handles WebSocket connections
 func HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 	// Check authentification with cookie
@@ -159,16 +169,6 @@ func HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
-
-// Define a Connection struct
-type Connection struct {
-	UserID string
-	Conn   *websocket.Conn
-}
-
-// Create a slice to store connections instead of a map
-var connections []Connection
-var connectionsLock sync.Mutex
 
 // Send all online users to a specific client
 func sendOnlineUsersList(conn *websocket.Conn) {
