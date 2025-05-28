@@ -54,6 +54,7 @@ export function loadAllUsers() {
     .catch((error) => console.error("Error fetching users:", error));
 }
 
+// Display the users in the users list
 export function updateUsersList(users) {
   const usersList = document.querySelector(".users-list");
   if (!usersList) return;
@@ -100,6 +101,7 @@ export function handleUserStatusChange(message) {
   }, 100);
 }
 
+// get the online status, update the cached users and then the users list, broadcast the change with websocket
 function processUserStatusUpdate(message) {
   const usersList = document.querySelector(".users-list");
   if (!usersList) return;
